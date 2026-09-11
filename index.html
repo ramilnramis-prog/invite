@@ -1,0 +1,2628 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="electric">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>INVITE — конструктор интерактивных приглашений</title>
+<style>
+/* ============================================================
+   INVITE — один файл: HTML + CSS + JS + SVG.
+   Разделы: 1) токены  2) база и утилиты  3) панель редактора
+            4) редактор  5) приглашение  6) темы  7) адаптив
+   ============================================================ */
+
+/* ---------- 1. Токены ---------- */
+:root{
+  color-scheme: light;
+  --ui-bg-1:#F5F6FA;
+  --ui-bg-2:#ECEAF6;
+  --ui-card:#FFFFFF;
+  --ui-card-soft:#F7F7FB;
+  --ui-ink:#1B1A2E;
+  --ui-ink-2:#5A5876;
+  --ui-ink-3:#8B89A6;
+  --ui-line:#E4E2EF;
+  --ui-line-2:#CFCCE2;
+  --ui-accent:#4F35D6;
+  --ui-accent-ink:#FFFFFF;
+  --ui-accent-soft:#EDE9FF;
+  --ui-warn-bg:#FFF4E5;
+  --ui-warn-line:#F3CD93;
+  --ui-warn-ink:#7A4A05;
+  --ui-err:#C62350;
+  --ui-err-bg:#FFEDF2;
+  --ui-ok:#1D8A5B;
+  --ui-focus:#1F52FF;
+  --r-s:12px;
+  --r-m:16px;
+  --r-l:22px;
+  --r-xl:30px;
+  --sh-1:0 1px 2px rgba(23,21,47,.05), 0 6px 18px -8px rgba(23,21,47,.14);
+  --sh-2:0 18px 44px -22px rgba(23,21,47,.34);
+  --u: clamp(14px, 0.55vw + 8px, 22px);
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+          "Noto Sans", "PT Sans", "Liberation Sans", Arial, sans-serif;
+}
+
+/* ---------- 2. База ---------- */
+*,*::before,*::after{ box-sizing:border-box; }
+html,body{ margin:0; padding:0; }
+html{ -webkit-text-size-adjust:100%; }
+body{
+  font-family:var(--font);
+  font-size:16px;
+  line-height:1.5;
+  color:var(--ui-ink);
+  background:
+    radial-gradient(1200px 620px at 8% -8%, #EDE7FF 0%, rgba(237,231,255,0) 62%),
+    radial-gradient(900px 520px at 100% 0%, #E4F7EE 0%, rgba(228,247,238,0) 58%),
+    linear-gradient(180deg, var(--ui-bg-1) 0%, var(--ui-bg-2) 100%);
+  background-attachment: fixed;
+  min-height:100vh;
+}
+img,svg{ display:block; max-width:100%; }
+h1,h2,h3,h4,p,ul,ol,figure{ margin:0; }
+ul,ol{ padding:0; list-style:none; }
+button{ font:inherit; color:inherit; }
+:focus-visible{ outline:3px solid var(--ui-focus); outline-offset:2px; border-radius:6px; }
+.sr-only{
+  position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+  overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0;
+}
+[hidden]{ display:none !important; }
+
+/* ---------- 3. Панель и каркас ---------- */
+.topbar{
+  position:sticky; top:0; z-index:40;
+  background:rgba(252,252,255,.9);
+  backdrop-filter:saturate(1.4) blur(12px);
+  border-bottom:1px solid var(--ui-line);
+}
+.topbar__in{
+  max-width:1680px; margin:0 auto;
+  padding:10px clamp(12px, 2vw, 26px);
+  display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+}
+.brand{ display:flex; align-items:center; gap:10px; margin-right:auto; min-width:0; }
+.brand__mark{
+  width:38px; height:38px; border-radius:12px; flex:0 0 auto;
+  background:linear-gradient(145deg,#28234B 0%,#17152F 100%);
+  display:grid; place-items:center;
+  box-shadow:0 8px 20px -10px rgba(23,21,47,.7);
+}
+.brand__name{
+  font-size:20px; font-weight:800; letter-spacing:.16em; line-height:1;
+  display:flex; align-items:baseline; gap:2px;
+}
+.brand__dot{ width:7px; height:7px; border-radius:50%; background:#DFFF70; box-shadow:0 0 0 3px rgba(223,255,112,.28); display:inline-block; }
+.brand__tag{
+  display:block; font-size:14px; font-weight:500; letter-spacing:.02em;
+  color:var(--ui-ink-2); margin-top:2px;
+}
+.topbar__actions{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  min-height:44px; padding:0 16px;
+  border-radius:999px; border:1px solid var(--ui-line-2);
+  background:var(--ui-card); color:var(--ui-ink);
+  font-size:15px; font-weight:600; cursor:pointer;
+  transition:transform .16s ease, box-shadow .18s ease, background-color .18s ease,
+             border-color .18s ease, color .18s ease;
+}
+.btn:hover{ background:var(--ui-accent-soft); border-color:var(--ui-accent); color:var(--ui-accent); }
+.btn:active{ transform:translateY(1px) scale(.985); }
+.btn:disabled{ opacity:.55; cursor:not-allowed; transform:none; }
+.btn--primary{
+  background:var(--ui-accent); border-color:var(--ui-accent); color:var(--ui-accent-ink);
+  box-shadow:0 12px 26px -14px rgba(79,53,214,.85);
+}
+.btn--primary:hover{ background:#3F27C0; border-color:#3F27C0; color:#fff; }
+.btn--ghost{ background:transparent; border-color:var(--ui-line-2); }
+.btn--ghost:hover{ background:#fff; }
+.btn--mini{ min-height:36px; padding:0 12px; font-size:14px; }
+.btn--danger{ color:var(--ui-err); border-color:#F0C4D2; background:#fff; }
+.btn--danger:hover{ background:var(--ui-err-bg); border-color:var(--ui-err); color:var(--ui-err); }
+.btn__ico{ flex:0 0 auto; }
+
+.btn--jump{ display:none; text-decoration:none; }
+
+.hint{
+  max-width:1680px; margin:0 auto;
+  padding:0 clamp(12px, 2vw, 26px) 10px;
+  font-size:14px; color:var(--ui-ink-2);
+  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+}
+.hint__key{ font-weight:700; color:var(--ui-ink); }
+
+.notice{
+  max-width:1680px; margin:0 auto 10px;
+  padding:12px 16px;
+  border-radius:var(--r-m);
+  font-size:15px; line-height:1.45;
+  border:1px solid var(--ui-warn-line); background:var(--ui-warn-bg); color:var(--ui-warn-ink);
+}
+.notice--error{ border-color:#F0BBCB; background:var(--ui-err-bg); color:#8E1236; }
+.notice strong{ font-weight:700; }
+.notice__row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:10px; }
+
+#shell{ max-width:1680px; margin:0 auto; padding:16px clamp(12px, 2vw, 26px) 48px; }
+.layout{
+  display:grid;
+  grid-template-columns:minmax(340px, 430px) minmax(0, 1fr);
+  gap:clamp(16px, 2.2vw, 32px);
+  align-items:start;
+}
+.pane::before{
+  content:attr(data-pane);
+  display:none;
+}
+#guestRoot{ display:flex; flex-direction:column; gap:16px; }
+
+/* ---------- 4. Редактор ---------- */
+.pane--editor{ position:sticky; top:104px; }
+.editor{
+  background:var(--ui-card);
+  border:1px solid var(--ui-line);
+  border-radius:var(--r-xl);
+  box-shadow:var(--sh-1);
+  padding:clamp(16px, 1.6vw, 24px);
+  display:flex; flex-direction:column; gap:18px;
+  max-height:calc(100vh - 132px);
+  overflow:auto;
+  overscroll-behavior:contain;
+}
+.editor__head{ display:flex; flex-direction:column; gap:6px; }
+.editor__title{ font-size:21px; font-weight:800; letter-spacing:-.01em; }
+.editor__lead{ font-size:14.5px; color:var(--ui-ink-2); }
+
+.form{ display:flex; flex-direction:column; gap:14px; }
+.form__row{ display:grid; gap:14px; }
+.form__row--2{ grid-template-columns:1fr 1fr; }
+.field{ display:flex; flex-direction:column; gap:7px; min-width:0; }
+.field__head{ display:flex; align-items:baseline; gap:10px; }
+.field__label{
+  font-size:14px; font-weight:600; color:var(--ui-ink-2); letter-spacing:.01em;
+  min-width:0;
+}
+.field__opt{ font-weight:500; color:var(--ui-ink-3); font-size:14px; }
+.field__count{ margin-left:auto; font-size:14px; color:var(--ui-ink-3); font-variant-numeric:tabular-nums; white-space:nowrap; }
+.field__count.is-over{ color:var(--ui-err); font-weight:700; }
+.input, .textarea{
+  width:100%; min-height:44px; padding:11px 13px;
+  border-radius:var(--r-s); border:1px solid var(--ui-line-2);
+  background:#fff; color:var(--ui-ink); font:inherit; font-size:16px;
+  transition:border-color .16s ease, box-shadow .16s ease, background-color .16s ease;
+}
+.textarea{ min-height:96px; resize:vertical; line-height:1.5; }
+.input:hover,.textarea:hover{ border-color:#B4B0CC; }
+.input:focus,.textarea:focus{
+  border-color:var(--ui-accent); box-shadow:0 0 0 4px rgba(79,53,214,.14); outline:none;
+}
+.input--time{ font-variant-numeric:tabular-nums; letter-spacing:.02em; }
+.input[aria-invalid="true"], .textarea[aria-invalid="true"]{
+  border-color:var(--ui-err); background:#FFF9FB; box-shadow:0 0 0 4px rgba(198,35,80,.12);
+}
+.field__hint{ font-size:14px; color:var(--ui-ink-3); }
+.field__error{ font-size:14px; font-weight:600; color:var(--ui-err); display:flex; gap:6px; align-items:flex-start; }
+.field__error::before{ content:"!"; flex:0 0 auto; width:17px; height:17px; border-radius:50%; background:var(--ui-err); color:#fff; font-size:12px; line-height:17px; text-align:center; font-weight:800; margin-top:2px; }
+
+.demo-note{
+  display:flex; gap:10px; align-items:flex-start;
+  padding:12px 14px; border-radius:var(--r-m);
+  background:linear-gradient(135deg,#F1EEFF 0%,#E9FBF3 100%);
+  border:1px solid #DCD8F5;
+  font-size:14.5px; color:#3B3660;
+}
+.demo-note strong{ color:#241C63; }
+.demo-note__badge{
+  flex:0 0 auto; font-size:12px; font-weight:800; letter-spacing:.08em; text-transform:uppercase;
+  background:#241C63; color:#DFFF70; border-radius:999px; padding:4px 9px; margin-top:1px;
+}
+
+.group{
+  border:1px solid var(--ui-line); border-radius:var(--r-l);
+  background:var(--ui-card-soft);
+  padding:14px; display:flex; flex-direction:column; gap:12px;
+}
+.group__head{ display:flex; align-items:center; gap:10px; }
+.group__title{ font-size:16px; font-weight:700; }
+.group__meta{ margin-left:auto; font-size:14px; color:var(--ui-ink-3); font-variant-numeric:tabular-nums; }
+.group__empty{ font-size:14.5px; color:var(--ui-ink-2); }
+.group--themes{ background:var(--ui-card-soft); }
+
+.agenda{ display:flex; flex-direction:column; gap:10px; }
+.agenda__item{
+  display:grid; grid-template-columns:minmax(0,1fr) auto;
+  gap:8px 10px; align-items:end;
+  background:#fff; border:1px solid var(--ui-line); border-radius:var(--r-m);
+  padding:10px;
+}
+.agenda__item .field--label{ grid-column:1 / -1; }
+.agenda__del{ width:44px; min-width:44px; padding:0; align-self:end; }
+.agenda__del span{ display:none; }
+
+.themes{ display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px; }
+.theme-card{
+  display:flex; flex-direction:column; gap:9px; align-items:stretch;
+  padding:9px; border-radius:var(--r-m); cursor:pointer;
+  border:2px solid var(--ui-line); background:#fff; text-align:left;
+  transition:border-color .18s ease, transform .18s ease, box-shadow .18s ease, background-color .18s ease;
+}
+.theme-card:hover{ transform:translateY(-2px); border-color:var(--ui-line-2); box-shadow:var(--sh-1); }
+.theme-card:active{ transform:translateY(0) scale(.99); }
+.theme-card[aria-pressed="true"]{
+  border-color:var(--ui-accent); background:var(--ui-accent-soft);
+  box-shadow:0 0 0 3px rgba(79,53,214,.16);
+}
+.theme-card__name{ font-size:14px; font-weight:700; display:flex; align-items:center; gap:6px; }
+.theme-card__check{ margin-left:auto; color:var(--ui-accent); opacity:0; transition:opacity .18s ease; }
+.theme-card[aria-pressed="true"] .theme-card__check{ opacity:1; }
+.theme-card__mini{
+  border-radius:10px; overflow:hidden; height:74px; padding:7px;
+  display:flex; flex-direction:column; gap:4px; justify-content:center;
+  border:1px solid rgba(23,21,47,.16);
+}
+.theme-card__mini--electric{ background:linear-gradient(150deg,#28234B 0%,#17152F 100%); }
+.theme-card__mini--sunset{ background:linear-gradient(150deg,#FF8A5B 0%,#FF6B45 100%); }
+.theme-card__mini--candy{ background:linear-gradient(150deg,#FFEFF6 0%,#FFD9EA 100%); }
+.m-mini{ border-radius:4px; height:8px; }
+.m-mini--title{ height:12px; width:74%; }
+.m-mini--dots{ display:flex; gap:3px; }
+.m-mini--dots i{ width:7px; height:7px; border-radius:2px; display:block; }
+.theme-card__mini--electric .m-mini{ background:#B9A1FF; }
+.theme-card__mini--electric .m-mini--title{ background:#DFFF70; }
+.theme-card__mini--electric i{ background:#DFFF70; }
+.theme-card__mini--sunset .m-mini{ background:#4B2379; opacity:.55; }
+.theme-card__mini--sunset .m-mini--title{ background:#4B2379; opacity:1; }
+.theme-card__mini--sunset i{ background:#FF6B45; }
+.theme-card__mini--candy .m-mini{ background:#6336E8; opacity:.4; }
+.theme-card__mini--candy .m-mini--title{ background:#6336E8; opacity:1; }
+.theme-card__mini--candy i{ background:#C9F15B; }
+
+/* ---------- 5. Приглашение ---------- */
+.pane--preview{ min-width:0; }
+.preview-wrap{
+  background:var(--ui-card);
+  border:1px solid var(--ui-line);
+  border-radius:var(--r-xl);
+  box-shadow:var(--sh-1);
+  padding:clamp(10px, 1.1vw, 16px);
+}
+.preview-bar{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:4px 6px 12px;
+}
+.preview-bar__label{ font-size:14px; font-weight:700; color:var(--ui-ink-2); letter-spacing:.06em; text-transform:uppercase; }
+.preview-bar__meta{ margin-left:auto; font-size:14px; color:var(--ui-ink-3); }
+
+.card{
+  --bg:#17152F; --bg-2:#28234B; --surface:#28234B; --surface-2:#312B5C;
+  --accent:#DFFF70; --accent-ink:#17152F; --accent-2:#B9A1FF;
+  --ink:#F8F9FF; --muted:#BEB9DE; --line:rgba(248,249,255,.16);
+  --card-r:26px; --font-title:var(--font);
+  --card-shadow:0 30px 70px -30px rgba(23,21,47,.6);
+  background:var(--bg); color:var(--ink);
+  border-radius:var(--card-r);
+  box-shadow:var(--card-shadow);
+  padding:calc(var(--u) * 1.6);
+  display:flex; flex-direction:column; gap:calc(var(--u) * 1.15);
+  position:relative; overflow:hidden; isolation:isolate;
+  font-size:16px;
+}
+.card--appear{ animation:cardIn .24s ease-out both; }
+@keyframes cardIn{ from{ opacity:0; transform:translateY(10px) scale(.994); } to{ opacity:1; transform:none; } }
+
+.card__deco{ position:absolute; inset:0; z-index:-1; pointer-events:none; }
+.deco{ position:absolute; display:block; }
+.deco--glow{ width:62%; aspect-ratio:1; border-radius:50%; filter:blur(46px); opacity:.5; }
+.deco--blob{ width:44%; aspect-ratio:1; border-radius:50%; filter:blur(30px); opacity:.45; }
+.deco--ring{ border-radius:50%; }
+.deco--sq{ border-radius:14%; }
+.deco--star{ animation:twinkle 4.5s ease-in-out infinite; }
+@keyframes twinkle{ 0%,100%{ opacity:.35; transform:scale(.86); } 50%{ opacity:1; transform:scale(1); } }
+.deco--conf{ border-radius:2px; animation:float 6s ease-in-out infinite; }
+@keyframes float{ 0%,100%{ transform:translateY(0) rotate(-8deg); } 50%{ transform:translateY(-9px) rotate(8deg); } }
+
+.card__body{ display:flex; flex-direction:column; gap:calc(var(--u) * 1.05); position:relative; }
+
+.hero{ display:flex; flex-direction:column; gap:calc(var(--u) * .7); }
+.hero__kicker{
+  display:inline-flex; align-items:center; gap:8px; align-self:flex-start;
+  font-size:max(14px, calc(var(--u) * .74)); font-weight:800; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--accent); max-width:100%;
+}
+.hero__kicker-dot{ width:8px; height:8px; border-radius:50%; background:currentColor; box-shadow:0 0 0 4px color-mix(in srgb, currentColor 26%, transparent); flex:0 0 auto; }
+.hero__title{
+  font-family:var(--font-title);
+  font-size:clamp(32px, calc(var(--u) * 3), 92px);
+  line-height:1.02; font-weight:800; letter-spacing:-.022em;
+  margin:0; max-width:22ch;
+  overflow-wrap:anywhere; hyphens:auto;
+}
+.hero__title-accent{ position:relative; display:inline-block; padding:0 .06em; }
+.hero__title-accent::after{
+  content:""; position:absolute; left:-2%; right:-2%; bottom:.04em; height:.3em;
+  background:var(--accent); opacity:.82; border-radius:.16em; z-index:-1; transform:rotate(-.6deg);
+}
+.hero__bars{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.bar{ height:10px; border-radius:999px; }
+.bar--a{ width:74px; background:var(--accent); }
+.bar--b{ width:34px; background:var(--accent-2); }
+.bar--c{ width:14px; height:14px; border-radius:50%; background:var(--surface-2); border:2px solid var(--line); }
+
+.grid-2{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:calc(var(--u) * .8); }
+.cal, .info{
+  position:relative; overflow:hidden;
+  background:var(--surface); border:1px solid var(--line);
+  border-radius:var(--card-r); padding:calc(var(--u) * 1.05);
+  display:flex; flex-direction:column; gap:6px; min-width:0;
+}
+/* Календарный блок — второй по силе акцент после заголовка. */
+.cal--lime{
+  background:linear-gradient(155deg, var(--accent) 0%, color-mix(in srgb, var(--accent) 78%, #ffffff) 100%);
+  color:var(--accent-ink); border-color:transparent;
+  box-shadow:0 16px 34px -24px color-mix(in srgb, var(--accent) 60%, #000);
+}
+.cal--lime .cal__month, .cal--lime .cal__year, .cal--lime .cal__weekday{ color:color-mix(in srgb, var(--accent-ink) 82%, transparent); }
+.cal--lime .cal__badge{ background:rgba(23,21,47,.12); color:var(--accent-ink); }
+.cal__top{ display:flex; align-items:center; gap:8px; }
+.cal__badge{
+  font-size:max(13px, calc(var(--u) * .68)); font-weight:800; letter-spacing:.1em; text-transform:uppercase;
+  background:var(--surface-2); color:var(--muted); border-radius:999px; padding:5px 10px;
+}
+.cal__year{ margin-left:auto; font-size:max(14px, calc(var(--u) * .74)); font-weight:700; color:var(--muted); font-variant-numeric:tabular-nums; }
+.cal__day{
+  font-size:clamp(48px, calc(var(--u) * 4.4), 108px); line-height:.84; font-weight:900;
+  letter-spacing:-.045em; font-variant-numeric:tabular-nums;
+}
+.cal__month{ font-size:clamp(20px, calc(var(--u) * 1.2), 38px); font-weight:800; text-transform:lowercase; }
+.cal__weekday{ font-size:max(15px, calc(var(--u) * .86)); font-weight:700; color:var(--muted); }
+.cal__frame{ position:absolute; right:calc(var(--u) * -0.6); bottom:calc(var(--u) * -0.9); width:52%; opacity:.34; }
+
+.info__label{
+  display:flex; align-items:center; gap:8px;
+  font-size:max(14px, calc(var(--u) * .74)); font-weight:800; letter-spacing:.12em; text-transform:uppercase;
+  color:var(--accent-2);
+}
+.info__label--accent{ color:var(--accent); }
+.info__icon{ width:26px; height:26px; flex:0 0 auto; color:var(--accent); }
+.info__main{
+  font-size:clamp(22px, calc(var(--u) * 1.65), 46px); font-weight:800; line-height:1.06;
+  font-variant-numeric:tabular-nums; overflow-wrap:anywhere; letter-spacing:-.01em;
+}
+.info__sub{ font-size:max(15px, calc(var(--u) * .9)); color:var(--muted); overflow-wrap:anywhere; }
+.info__tz{
+  margin-top:auto; padding-top:8px; font-size:max(14px, calc(var(--u) * .74)); font-weight:600; color:var(--muted);
+  display:flex; align-items:center; gap:7px; flex-wrap:wrap;
+}
+.info__tz svg{ width:16px; height:16px; flex:0 0 auto; }
+.info__actions{ margin-top:8px; }
+.chip{
+  display:inline-flex; align-items:center; gap:8px;
+  min-height:40px; padding:0 14px; border-radius:999px; cursor:pointer;
+  font-size:max(14px, calc(var(--u) * .78)); font-weight:700;
+  background:transparent; color:var(--accent-2); border:1.5px solid var(--accent-2);
+  transition:background-color .18s ease, color .18s ease, transform .16s ease, border-color .18s ease;
+}
+.chip:hover{ background:var(--accent-2); color:var(--accent-ink); }
+.chip:active{ transform:scale(.97); }
+.chip svg{ width:18px; height:18px; flex:0 0 auto; }
+.chip--solid{ background:var(--accent); border-color:var(--accent); color:var(--accent-ink); }
+.chip--solid:hover{ background:color-mix(in srgb, var(--accent) 84%, #000); color:var(--accent-ink); border-color:transparent; }
+
+.count{ background:var(--surface); border:1px solid var(--line); border-radius:var(--card-r); padding:calc(var(--u) * 1.05); display:flex; flex-direction:column; gap:calc(var(--u) * .7); }
+.count__head{ display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
+.count__title{ font-size:max(14px, calc(var(--u) * .74)); font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-2); }
+.count__state{ margin-left:auto; font-size:max(14px, calc(var(--u) * .8)); font-weight:700; color:var(--muted); text-align:right; }
+.count__grid{ display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:calc(var(--u) * .5); }
+.count__cell{
+  background:var(--surface-2); border:1px solid var(--line); border-radius:16px;
+  padding:calc(var(--u) * .62) 4px; text-align:center; min-width:0;
+}
+.count__val{
+  font-size:clamp(24px, calc(var(--u) * 1.9), 54px); font-weight:900; line-height:1;
+  font-variant-numeric:tabular-nums; letter-spacing:-.02em;
+}
+.count__lbl{ margin-top:6px; font-size:max(13px, calc(var(--u) * .68)); font-weight:600; color:var(--muted); }
+
+.agenda{ background:transparent; }
+.agenda__title{ font-size:max(14px, calc(var(--u) * .74)); font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-2); }
+/* Временная шкала: маркер, время и название — отдельные колонки, линия по центрам маркеров. */
+.timeline{
+  --tl-dot:12px; --tl-gap:calc(var(--u) * .75);
+  position:relative; display:flex; flex-direction:column; gap:calc(var(--u) * .75);
+  padding-left:calc(var(--tl-dot) + var(--tl-gap));
+}
+.timeline::before{
+  content:""; position:absolute; left:calc(var(--tl-dot) / 2 - 1px); top:7px; bottom:7px;
+  width:2px; border-radius:2px; opacity:.5;
+  background:linear-gradient(180deg, var(--accent) 0%, var(--accent-2) 100%);
+}
+.tl__item{ display:grid; grid-template-columns:auto minmax(0,1fr); column-gap:var(--tl-gap); align-items:start; min-width:0; }
+.tl__dot{
+  grid-column:1; grid-row:1; margin-top:.34em; justify-self:start;
+  width:var(--tl-dot); height:var(--tl-dot); border-radius:50%;
+  background:var(--accent); box-shadow:0 0 0 4px color-mix(in srgb, var(--accent) 24%, transparent);
+}
+.tl__body{ grid-column:2; grid-row:1; display:grid; grid-template-columns:minmax(0,auto) minmax(0,1fr); column-gap:calc(var(--u) * .7); align-items:baseline; min-width:0; }
+.tl__time{ font-size:clamp(16px, calc(var(--u) * .95), 25px); font-weight:800; font-variant-numeric:tabular-nums; color:var(--accent); }
+.tl__label{ font-size:max(16px, calc(var(--u) * .96)); font-weight:600; overflow-wrap:anywhere; min-width:0; }
+.tl__item--stacked .tl__body{ grid-template-columns:minmax(0,1fr); row-gap:2px; }
+
+.note{
+  background:var(--surface); border:1px solid var(--line); border-left:6px solid var(--accent);
+  border-radius:var(--card-r); padding:calc(var(--u) * .95);
+  font-size:max(16px, calc(var(--u) * .96)); line-height:1.5; white-space:pre-wrap; overflow-wrap:anywhere;
+  color:var(--ink);
+}
+.card__foot{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:max(14px, calc(var(--u) * .74)); color:var(--muted); }
+.card__foot .dot{ width:6px; height:6px; border-radius:50%; background:var(--accent); }
+.card__marks{ display:flex; gap:6px; align-items:center; }
+.card__marks i{ display:block; border-radius:2px; }
+.card__marks i:nth-child(1){ width:26px; height:5px; background:var(--accent); }
+.card__marks i:nth-child(2){ width:12px; height:5px; background:var(--accent-2); }
+.card__marks i:nth-child(3){ width:5px; height:5px; border-radius:50%; background:var(--muted); }
+
+/* ---------- 6. Темы ---------- */
+.card[data-theme="electric"]{
+  --bg:linear-gradient(165deg,#28234B 0%,#17152F 62%,#12102A 100%);
+  --surface:#28234B; --surface-2:#332C60;
+  --accent:#DFFF70; --accent-ink:#17152F; --accent-2:#B9A1FF;
+  --ink:#F8F9FF; --muted:#B7B1DC; --line:rgba(248,249,255,.16);
+  --font-title:var(--font);
+}
+.card[data-theme="electric"] .deco--glow{ left:-16%; top:-24%; background:#6C4BFF; }
+.card[data-theme="electric"] .deco--blob{ right:-14%; top:6%; background:#2AD8B0; opacity:.28; }
+.card[data-theme="electric"] .deco--ring{ width:190px; height:190px; right:-52px; bottom:16%; border:2px solid rgba(223,255,112,.34); }
+.card[data-theme="electric"] .deco--sq{ width:96px; height:96px; left:-26px; bottom:12%; background:rgba(185,161,255,.2); }
+.card[data-theme="electric"] .deco--star{ color:#DFFF70; }
+.card[data-theme="electric"] .deco--conf{ background:#B9A1FF; opacity:.6; }
+.card[data-theme="electric"] .hero__kicker{ background:linear-gradient(90deg,#DFFF70,#B9A1FF); -webkit-background-clip:text; background-clip:text; color:transparent; }
+.card[data-theme="electric"] .hero__kicker-dot{ color:#DFFF70; background:#DFFF70; }
+.card[data-theme="electric"] .note{ background:rgba(248,249,255,.06); }
+
+.card[data-theme="sunset"]{
+  --bg:linear-gradient(170deg,#FF8A5B 0%,#FF6B45 46%,#F8574B 100%);
+  --surface:#FFF3E5; --surface-2:#FFE4CC;
+  --accent:#4B2379; --accent-ink:#FFF3E5; --accent-2:#4B2379;
+  --ink:#24162C; --muted:#7B5A6E; --line:rgba(36,22,44,.14);
+  --card-r:22px;
+  --card-shadow:0 30px 70px -32px rgba(122,44,20,.65);
+}
+.card[data-theme="sunset"] .deco--glow{ left:50%; top:-60%; transform:translateX(-50%); width:96%; background:#FFD9A8; opacity:.85; }
+.card[data-theme="sunset"] .deco--blob{ right:-18%; bottom:-16%; background:#FF3D7F; opacity:.4; }
+.card[data-theme="sunset"] .deco--ring{ width:220px; height:220px; left:-70px; top:-60px; border:3px dashed rgba(36,22,44,.22); }
+.card[data-theme="sunset"] .deco--sq{ width:110px; height:110px; right:-30px; top:24%; background:rgba(75,35,121,.14); border-radius:50%; }
+.card[data-theme="sunset"] .deco--star{ color:#4B2379; animation-duration:5.5s; }
+.card[data-theme="sunset"] .deco--conf{ background:#4B2379; opacity:.35; }
+.card[data-theme="sunset"] .hero__title{ letter-spacing:-.025em; }
+.card[data-theme="sunset"] .hero__title-accent::after{ opacity:.9; background:#FFB08A; border-radius:.2em; transform:rotate(-1.1deg); }
+.card[data-theme="sunset"] .hero__kicker{ color:#4B2379; }
+.card[data-theme="sunset"] .info__label{ color:#6B3A9E; }
+.card[data-theme="sunset"] .info__label--accent{ color:#4B2379; }
+.card[data-theme="sunset"] .info__icon{ color:#4B2379; }
+.card[data-theme="sunset"] .count__title{ color:#6B3A9E; }
+.card[data-theme="sunset"] .count__cell{ background:#fff; box-shadow:0 6px 16px -12px rgba(36,22,44,.4); }
+.card[data-theme="sunset"] .chip:hover{ background:#4B2379; color:#FFF3E5; }
+.card[data-theme="sunset"] .tl__item::before{ background:#4B2379; box-shadow:0 0 0 4px rgba(75,35,121,.18); }
+.card[data-theme="sunset"] .tl__time{ color:#4B2379; }
+.card[data-theme="sunset"] .timeline::before{ background:linear-gradient(180deg,#4B2379,#FF6B45); }
+.card[data-theme="sunset"] .note{ background:#FFF3E5; border-left-color:#4B2379; }
+
+.card[data-theme="candy"]{
+  --bg:linear-gradient(168deg,#FFF0F6 0%,#FFE6F1 52%,#FBD9EE 100%);
+  --surface:#FFFFFF; --surface-2:#F4EEFF;
+  --accent:#6336E8; --accent-ink:#FFFFFF; --accent-2:#6336E8;
+  --ink:#21132E; --muted:#776A8F; --line:rgba(33,19,46,.13);
+  --card-r:28px;
+  --card-shadow:0 30px 70px -34px rgba(99,54,232,.45);
+}
+.card[data-theme="candy"] .deco--glow{ right:-18%; top:-22%; background:#FFB6DE; opacity:.75; }
+.card[data-theme="candy"] .deco--blob{ left:-16%; bottom:-14%; background:#C9F15B; opacity:.45; }
+.card[data-theme="candy"] .deco--ring{ width:170px; height:170px; right:-46px; top:38%; border:3px solid rgba(99,54,232,.24); }
+.card[data-theme="candy"] .deco--sq{ width:120px; height:70px; left:-24px; top:14%; background:rgba(201,241,91,.55); border-radius:18px; }
+.card[data-theme="candy"] .deco--star{ color:#6336E8; animation-duration:3.8s; }
+.card[data-theme="candy"] .deco--conf{ background:#FF7AC1; opacity:.5; }
+.card[data-theme="candy"] .hero__title-accent::after{ background:#C9F15B; opacity:.95; }
+.card[data-theme="candy"] .hero__kicker{ color:#6336E8; }
+.card[data-theme="candy"] .cal--lime{ background:linear-gradient(155deg,#FFFFFF 0%,#F3FFD9 100%); border:2px solid #C9F15B; }
+.card[data-theme="candy"] .cal--lime .cal__day{ color:#6336E8; }
+.card[data-theme="candy"] .cal--lime .cal__month{ color:#21132E; }
+.card[data-theme="candy"] .cal--lime .cal__weekday, .card[data-theme="candy"] .cal--lime .cal__year{ color:#776A8F; }
+.card[data-theme="candy"] .cal--lime .cal__badge{ background:#C9F15B; color:#21132E; }
+.card[data-theme="candy"] .info__label{ color:#6336E8; }
+.card[data-theme="candy"] .count__cell{ background:#F7F3FF; }
+.card[data-theme="candy"] .count__val{ color:#6336E8; }
+.card[data-theme="candy"] .chip:hover{ background:#6336E8; color:#fff; }
+.card[data-theme="candy"] .tl__item::before{ background:#6336E8; box-shadow:0 0 0 4px rgba(99,54,232,.16); }
+.card[data-theme="candy"] .tl__time{ color:#6336E8; }
+.card[data-theme="candy"] .timeline::before{ background:linear-gradient(180deg,#6336E8,#C9F15B); }
+
+/* ---------- 7. Гостевой режим и адаптив ---------- */
+#guestRoot .card{ max-width:1000px; margin:0 auto; width:100%; }
+.card--guest{ padding:clamp(20px, 3.4vw, 54px); gap:calc(var(--u) * 1.25); }
+.card--guest .hero__title{ font-size:clamp(34px, 4.8vw, 96px); max-width:24ch; }
+.card--guest .card__body{ gap:calc(var(--u) * 1.2); }
+#previewMount .card--preview .hero__title{ font-size:clamp(30px, calc(var(--u) * 2.7), 74px); }
+.guest-foot{ max-width:1000px; margin:0 auto; width:100%; display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+.guest-foot__note{ font-size:14px; color:var(--ui-ink-3); margin-left:auto; }
+
+@media (max-width: 1080px){
+  .layout{ grid-template-columns:1fr; }
+  .pane--editor{ position:static; order:2; scroll-margin-top:132px; }
+  .pane--preview{ order:1; }
+  .editor{ max-height:none; }
+  .btn--jump{ display:inline-flex; }
+  body{ --u: clamp(14px, 1.5vw + 6px, 20px); }
+}
+@media (max-width: 720px){
+  .topbar__in{ padding:10px 14px; }
+  .brand__tag{ font-size:13px; }
+  .topbar__actions{ width:100%; }
+  .topbar__actions .btn{ flex:1 1 150px; }
+  .form__row--2{ grid-template-columns:1fr; }
+  .agenda__item{ grid-template-columns:96px minmax(0,1fr) auto; }
+  .themes{ gap:8px; }
+  .theme-card{ padding:7px; }
+  .theme-card__mini{ height:62px; }
+  .theme-card__name{ font-size:13px; }
+  .grid-2{ grid-template-columns:1fr; }
+  .count__grid{ gap:6px; }
+  .count__cell{ border-radius:12px; }
+  .tl__time{ min-width:3.6em; }
+}
+@media (max-width: 420px){
+  body{ --u:16px; }
+  .editor, .preview-wrap{ border-radius:var(--r-l); }
+  .theme-card__name span:not(.theme-card__check){ font-size:12.5px; }
+  .count__lbl{ font-size:12.5px; }
+}
+@media (min-width: 1441px){
+  body{ --u:22px; }
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{
+    animation-duration:.001ms !important; animation-iteration-count:1 !important;
+    transition-duration:.001ms !important; scroll-behavior:auto !important;
+  }
+  .deco--star, .deco--conf{ animation:none !important; }
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar__in">
+    <div class="brand">
+      <span class="brand__mark" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+          <rect x="1.5" y="4" width="19" height="15" rx="4" stroke="#DFFF70" stroke-width="1.8"/>
+          <path d="M2 7.2 11 13l9-5.8" stroke="#B9A1FF" stroke-width="1.8" stroke-linecap="round"/>
+          <circle cx="11" cy="13" r="2.6" fill="#DFFF70"/>
+        </svg>
+      </span>
+      <span>
+        <span class="brand__name">INVITE<span class="brand__dot" aria-hidden="true"></span></span>
+        <span class="brand__tag" id="brandTag">конструктор приглашений</span>
+      </span>
+    </div>
+    <div class="topbar__actions">
+      <a class="btn btn--jump" href="#editorPane" id="btnJump">
+        <svg class="btn__ico" width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M3.4 6.2h13.2M3.4 10h13.2M3.4 13.8h8.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        <span>Настройки</span>
+      </a>
+      <button class="btn" type="button" id="btnGuest">
+        <svg class="btn__ico" width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M1.6 10S4.6 4.4 10 4.4 18.4 10 18.4 10 15.4 15.6 10 15.6 1.6 10 1.6 10Z" stroke="currentColor" stroke-width="1.7"/>
+          <circle cx="10" cy="10" r="2.6" stroke="currentColor" stroke-width="1.7"/>
+        </svg>
+        <span id="btnGuestLabel">Глазами гостя</span>
+      </button>
+      <button class="btn btn--primary" type="button" id="btnCopy">
+        <svg class="btn__ico" width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M8.2 11.8a3.4 3.4 0 0 0 4.8 0l2.6-2.6A3.4 3.4 0 0 0 10.8 4.4L9.5 5.7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+          <path d="M11.8 8.2a3.4 3.4 0 0 0-4.8 0L4.4 10.8a3.4 3.4 0 0 0 4.8 4.8l1.3-1.3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+        </svg>
+        <span id="btnCopyLabel">Скопировать ссылку</span>
+      </button>
+    </div>
+  </div>
+  <p class="hint" id="shareHint">
+    <span><span class="hint__key">Ссылка содержит данные приглашения. Изменения создают новую ссылку.</span></span>
+    <span id="hintExtra"></span>
+  </p>
+</header>
+
+<div class="notice" id="notice" hidden role="status" aria-live="polite"></div>
+
+<main id="shell">
+  <div class="layout" id="layout">
+
+    <section class="pane pane--editor" id="editorPane" aria-label="Редактор приглашения">
+      <div class="editor" id="editorBox">
+        <div class="editor__head">
+          <h1 class="editor__title">Редактор приглашения</h1>
+          <p class="editor__lead">Меняйте поля — приглашение справа обновляется сразу.</p>
+        </div>
+
+        <p class="demo-note" id="demoNote">
+          <span class="demo-note__badge">Пример</span>
+          <span>Это демонстрационный пример: <strong>замените поля</strong> на свои. Черновик сохраняется в этом браузере автоматически.</span>
+        </p>
+
+        <section class="group group--themes" aria-labelledby="themeHead">
+          <div class="group__head">
+            <h2 class="group__title" id="themeHead">Оформление</h2>
+            <span class="group__meta">3 темы</span>
+          </div>
+          <div class="themes" id="themeList" role="group" aria-labelledby="themeHead"></div>
+        </section>
+
+        <div class="form">
+          <div class="field" data-field="title">
+            <div class="field__head">
+              <label class="field__label" for="fTitle">Название события</label>
+              <span class="field__count" id="cTitle">0/70</span>
+            </div>
+            <input class="input" id="fTitle" type="text" maxlength="70" autocomplete="off"
+                   placeholder="Например: День рождения Саши">
+            <p class="field__error" id="eTitle" hidden></p>
+          </div>
+
+          <div class="form__row form__row--2">
+            <div class="field" data-field="date">
+              <div class="field__head">
+                <label class="field__label" for="fDate">Дата</label>
+              </div>
+              <input class="input" id="fDate" type="date" min="1900-01-01" max="2999-12-31">
+              <p class="field__error" id="eDate" hidden></p>
+            </div>
+            <div class="field" data-field="time">
+              <div class="field__head">
+                <label class="field__label" for="fTime">Время</label>
+                <span class="field__count" id="tzShort"></span>
+              </div>
+              <input class="input input--time" id="fTime" type="time" step="60">
+              <p class="field__hint" id="hTime"></p>
+              <p class="field__error" id="eTime" hidden></p>
+            </div>
+          </div>
+
+          <div class="field" data-field="venue">
+            <div class="field__head">
+              <label class="field__label" for="fVenue">Название места</label>
+              <span class="field__count" id="cVenue">0/80</span>
+            </div>
+            <input class="input" id="fVenue" type="text" maxlength="80" autocomplete="off"
+                   placeholder="Например: Лофт «Искра»">
+            <p class="field__error" id="eVenue" hidden></p>
+          </div>
+
+          <div class="field" data-field="address">
+            <div class="field__head">
+              <label class="field__label" for="fAddress">Адрес</label>
+              <span class="field__count" id="cAddress">0/140</span>
+            </div>
+            <input class="input" id="fAddress" type="text" maxlength="140" autocomplete="off"
+                   placeholder="Например: Пример адреса: улица Примерная, 12">
+            <p class="field__error" id="eAddress" hidden></p>
+          </div>
+
+          <div class="field" data-field="description">
+            <div class="field__head">
+              <label class="field__label" for="fDescription">Короткое описание <span class="field__opt">— необязательно</span></label>
+              <span class="field__count" id="cDescription">0/280</span>
+            </div>
+            <textarea class="textarea" id="fDescription" maxlength="280"
+                      placeholder="Пара слов о том, что будет на событии"></textarea>
+            <p class="field__error" id="eDescription" hidden></p>
+          </div>
+        </div>
+
+        <section class="group" aria-labelledby="agendaHead">
+          <div class="group__head">
+            <h2 class="group__title" id="agendaHead">Программа</h2>
+            <span class="group__meta" id="agendaMeta">0/3</span>
+          </div>
+          <p class="group__empty" id="agendaEmpty">Пунктов пока нет. Добавьте до трёх шагов — они появятся на временной шкале приглашения.</p>
+          <div class="agenda" id="agendaList"></div>
+          <div>
+            <button class="btn btn--mini btn--ghost" type="button" id="btnAddAgenda">
+              <svg class="btn__ico" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+              </svg>
+              Добавить пункт
+            </button>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section class="pane pane--preview" id="previewPane" aria-label="Предпросмотр приглашения">
+      <div class="preview-wrap">
+        <div class="preview-bar">
+          <span class="preview-bar__label" id="previewLabel">Предпросмотр</span>
+          <span class="preview-bar__meta" id="previewMeta"></span>
+        </div>
+        <div id="previewMount"></div>
+      </div>
+    </section>
+
+  </div>
+
+  <div id="guestRoot" hidden></div>
+</main>
+
+<noscript>
+  <p class="notice notice--error" style="display:block">Для работы INVITE нужен JavaScript в браузере.</p>
+</noscript>
+
+<script>
+"use strict";
+(function () {
+  /* ============================================================
+     0. Константы и справочники
+     ============================================================ */
+  var APP = {
+    schemaVersion: 1,
+    draftSchemaVersion: 2,
+    fragmentKey: "invite",
+    draftKey: "invite.draft.v1",
+    themes: ["electric", "sunset", "candy"],
+    defaultTheme: "electric",
+    agendaMax: 3,
+    maxLinkLength: 6000,
+    limits: { title: 70, venue: 80, address: 140, description: 280, agendaItems: 3, agendaTime: 5, agendaLabel: 60 }
+  };
+  var MONTHS = ["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
+  var MONTHS_NOM = ["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
+  var WEEKDAYS_NOM = ["воскресенье","понедельник","вторник","среда","четверг","пятница","суббота"];
+  var WEEKDAYS_ACC = ["в воскресенье","в понедельник","во вторник","в среду","в четверг","в пятницу","в субботу"];
+  var COUNT_LABELS = { days: ["день","дня","дней"], hours: ["час","часа","часов"], minutes: ["минута","минуты","минут"], seconds: ["секунда","секунды","секунд"] };
+  var THEME_INFO = [
+    { id: "electric", name: "Electric", note: "Тёмная фестивальная афиша" },
+    { id: "sunset", name: "Sunset", note: "Оранжевая энергия" },
+    { id: "candy", name: "Candy", note: "Розовый праздник" }
+  ];
+
+  /* ============================================================
+     1. Утилиты
+     ============================================================ */
+  function $(id) { return document.getElementById(id); }
+  function clamp(n, a, b) { return n < a ? a : (n > b ? b : n); }
+
+  function el(tag, cls, text) {
+    var node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text !== undefined && text !== null) node.textContent = String(text);
+    return node;
+  }
+  function svgEl(tag, attrs) {
+    var node = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    if (attrs) Object.keys(attrs).forEach(function (k) { node.setAttribute(k, attrs[k]); });
+    return node;
+  }
+  function clearNode(node) { while (node.firstChild) node.removeChild(node.firstChild); }
+
+  function parseLocalDateTime(dateStr, timeStr) {
+    var dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateStr || ""));
+    var tm = /^(\d{1,2}):(\d{2})$/.exec(String(timeStr || ""));
+    if (!dm || !tm) return null;
+    var h = parseInt(tm[1], 10), mi = parseInt(tm[2], 10);
+    if (h > 23 || mi > 59) return null;
+    return { y: parseInt(dm[1], 10), m: parseInt(dm[2], 10), d: parseInt(dm[3], 10), h: h, min: mi };
+  }
+
+  function deviceTimeZone() {
+    try {
+      var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (tz && typeof tz === "string") return tz;
+    } catch (err) { /* игнорируем */ }
+    return "UTC";
+  }
+
+  function formatterFor(timeZone, options) {
+    var opts = Object.assign({ hour12: false }, options);
+    try { return new Intl.DateTimeFormat("ru-RU", Object.assign({ timeZone: timeZone }, opts)); }
+    catch (err) { }
+    if (timeZone !== "UTC") {
+      try { return new Intl.DateTimeFormat("ru-RU", Object.assign({ timeZone: "UTC" }, opts)); }
+      catch (err2) { }
+    }
+    try { return new Intl.DateTimeFormat("ru-RU", opts); }
+    catch (err3) { return null; }
+  }
+
+  /* Смещение пояса относительно UTC для конкретного момента, мс. */
+  function tzOffsetMs(instantMs, timeZone) {
+    var fmt = formatterFor(timeZone, {
+      year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", second: "2-digit"
+    });
+    if (!fmt) return 0;
+    var parts = fmt.formatToParts(new Date(instantMs));
+    var partMap = {};
+    for (var i = 0; i < parts.length; i++) {
+      if (parts[i].type !== "literal") partMap[parts[i].type] = parts[i].value;
+    }
+    var asUTC = Date.UTC(
+      parseInt(partMap.year, 10), parseInt(partMap.month, 10) - 1, parseInt(partMap.day, 10),
+      parseInt(partMap.hour, 10) % 24, parseInt(partMap.minute, 10), parseInt(partMap.second, 10)
+    );
+    return asUTC - instantMs;
+  }
+
+  /* Настенное время (в поясе timeZone) -> абсолютная метка UTC, мс. */
+  function wallTimeToUtc(y, m, d, h, min, timeZone) {
+    var guess = Date.UTC(y, m - 1, d, h, min, 0, 0);
+    var off1 = tzOffsetMs(guess, timeZone);
+    var ms = guess - off1;
+    var off2 = tzOffsetMs(ms, timeZone);
+    if (off2 !== off1) ms = guess - off2;
+    return ms;
+  }
+
+  /* Настенные части (в поясе timeZone) для абсолютной метки. */
+  function instantToWall(instantMs, timeZone) {
+    var fmt = formatterFor(timeZone, {
+      year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", second: "2-digit", weekday: "short"
+    });
+    if (!fmt) return null;
+    var parts = fmt.formatToParts(new Date(instantMs));
+    var partMap = {};
+    for (var i = 0; i < parts.length; i++) {
+      if (parts[i].type !== "literal") partMap[parts[i].type] = parts[i].value;
+    }
+    var hh = parseInt(partMap.hour, 10) % 24;
+    var dd = parseInt(partMap.day, 10), mm = parseInt(partMap.month, 10), yy = parseInt(partMap.year, 10);
+    return {
+      y: yy, m: mm, d: dd,
+      h: hh, min: parseInt(partMap.minute, 10), s: parseInt(partMap.second, 10),
+      dateKey: partMap.year + "-" + partMap.month + "-" + partMap.day,
+      hhmm: pad2(hh) + ":" + pad2(parseInt(partMap.minute, 10)),
+      weekdayShort: partMap.weekday || "",
+      weekdayIndex: new Date(Date.UTC(yy, mm - 1, dd)).getUTCDay()
+    };
+  }
+
+  function pad2(n) { return (n < 10 ? "0" : "") + n; }
+
+  function ordinalDay(y, m, d) {
+    var t = Date.UTC(y, m - 1, d) / 86400000;
+    var t0 = Date.UTC(y, 0, 1) / 86400000;
+    return Math.round(t - t0) + 1;
+  }
+
+  function daysInMonth(y, m) {
+    if (m === 2) return (y % 4 === 0 && (y % 100 !== 0 || y % 400 === 0)) ? 29 : 28;
+    return [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1];
+  }
+
+  function pluralize(n, forms) {
+    var a = Math.abs(n) % 100, b = a % 10;
+    if (a > 10 && a < 20) return forms[2];
+    if (b > 1 && b < 5) return forms[1];
+    if (b === 1) return forms[0];
+    return forms[2];
+  }
+
+  function timeZoneOffsetLabel(instantMs, timeZone) {
+    var off = tzOffsetMs(instantMs, timeZone);
+    var mins = Math.round(off / 60000);
+    var sign = mins < 0 ? "-" : "+";
+    mins = Math.abs(mins);
+    var h = Math.floor(mins / 60), m = mins % 60;
+    return "UTC" + sign + h + (m ? ":" + pad2(m) : "");
+  }
+
+  function shortTimeZoneLabel(timeZone) {
+    try {
+      var parts = new Intl.DateTimeFormat("ru-RU", { timeZone: timeZone, timeZoneName: "short" })
+        .formatToParts(new Date());
+      for (var i = 0; i < parts.length; i++) {
+        if (parts[i].type === "timeZoneName") return parts[i].value;
+      }
+    } catch (err) { }
+    return timeZone;
+  }
+
+  /* Понятное название пояса по IANA-идентификатору: Europe/Moscow -> «Москве». */
+  var TZ_CITY_RU = {
+    "Europe/Moscow": "Москве", "Europe/Kyiv": "Киеве", "Europe/Kiev": "Киеве",
+    "Europe/Minsk": "Минске", "Europe/Berlin": "Берлине", "Europe/Paris": "Париже",
+    "Europe/London": "Лондоне", "Europe/Prague": "Праге", "Europe/Warsaw": "Варшаве",
+    "Europe/Belgrade": "Белграде", "Europe/Istanbul": "Стамбуле", "Europe/Lisbon": "Лиссабоне",
+    "Asia/Tokyo": "Токио", "Asia/Shanghai": "Шанхае", "Asia/Dubai": "Дубае",
+    "Asia/Almaty": "Алматы", "Asia/Tbilisi": "Тбилиси", "Asia/Yerevan": "Ереване",
+    "Asia/Baku": "Баку", "Asia/Tashkent": "Ташкенте", "Asia/Novosibirsk": "Новосибирске",
+    "Asia/Yekaterinburg": "Екатеринбурге", "Asia/Vladivostok": "Владивостоке",
+    "Asia/Kolkata": "Калькутте", "Asia/Bangkok": "Бангкоке", "Asia/Seoul": "Сеуле",
+    "America/New_York": "Нью-Йорке", "America/Los_Angeles": "Лос-Анджелесе",
+    "America/Chicago": "Чикаго", "America/Sao_Paulo": "Сан-Паулу", "America/Toronto": "Торонто",
+    "Australia/Sydney": "Сиднее", "Africa/Cairo": "Каире", "UTC": "UTC", "Etc/UTC": "UTC"
+  };
+  function timeZonePlaceLabel(timeZone) {
+    if (TZ_CITY_RU[timeZone]) return TZ_CITY_RU[timeZone];
+    var parts = String(timeZone).split("/");
+    var last = parts[parts.length - 1].replace(/_/g, " ");
+    return last === "UTC" ? "UTC" : last;
+  }
+  /* Подпись вида «Время по Москве · UTC+3». Смещение считаем на момент события. */
+  function timeZoneLabel(timeZone, instantMs) {
+    var zone = (typeof timeZone === "string" && isValidTimeZone(timeZone)) ? timeZone : "UTC";
+    var stamp = isFinite(instantMs) ? instantMs : Date.now();
+    var place = timeZonePlaceLabel(zone);
+    var offset = timeZoneOffsetLabel(stamp, zone);
+    return place === "UTC" && offset === "UTC+0"
+      ? "Время по UTC"
+      : "Время по " + place + " · " + offset;
+  }
+
+  function formatWallDate(wall, style) {
+    if (!wall) return "";
+    if (style === "long") return wall.d + " " + MONTHS[wall.m - 1] + " " + wall.y;
+    if (style === "day-month") return wall.d + " " + MONTHS[wall.m - 1];
+    return pad2(wall.d) + "." + pad2(wall.m) + "." + wall.y;
+  }
+
+  function formatAgendaTime(str) {
+    var m = /^(\d{1,2}):(\d{2})$/.exec(String(str || ""));
+    if (!m) return String(str || "");
+    return pad2(parseInt(m[1], 10)) + ":" + m[2];
+  }
+
+  function niceHost() {
+    var host = "";
+    try { host = String(location.host || ""); } catch (err) { host = ""; }
+    return host;
+  }
+
+  function base64UrlFromBytes(bytes) {
+    var bin = "", chunk = 0x8000;
+    for (var i = 0; i < bytes.length; i += chunk) {
+      bin += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+    }
+    return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+
+  function bytesFromBase64Url(str) {
+    var s = String(str).replace(/-/g, "+").replace(/_/g, "/").trim();
+    while (s.length % 4) s += "=";
+    var bin = atob(s);
+    var out = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+
+  function encodeInvite(obj) {
+    var bytes = new TextEncoder().encode(JSON.stringify(obj));
+    return base64UrlFromBytes(bytes);
+  }
+
+  function decodeInvite(token) {
+    var bytes = bytesFromBase64Url(token);
+    var json = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    return JSON.parse(json);
+  }
+
+  function buildLink(invite) {
+    var token = encodeInvite(invite);
+    var origin = "https://invite.example";
+    try { origin = location.origin && location.origin !== "null" ? location.origin : origin; } catch (err) { }
+    var path = "";
+    try { path = location.pathname || "/index.html"; } catch (err) { path = "/index.html"; }
+    if (path === "/" ) path = "/index.html";
+    return origin + path + "#" + APP.fragmentKey + "=" + token;
+  }
+
+  function shareContext() {
+    var protocol = "";
+    try { protocol = location.protocol; } catch (err) { protocol = ""; }
+    if (protocol === "file:") {
+      return { ok: false, message: "Чтобы отправить приглашение, разместите INVITE на статическом HTTPS-хостинге.", kind: "file" };
+    }
+    if (protocol !== "http:" && protocol !== "https:") {
+      return { ok: false, message: "Чтобы отправить приглашение, разместите INVITE на статическом HTTPS-хостинге.", kind: "file" };
+    }
+    if (protocol === "http:" && niceHost() && !/^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(niceHost())) {
+      return { ok: false, message: "Ссылка для гостей работает на HTTPS-хостинге. Текущий адрес — HTTP.", kind: "http" };
+    }
+    return { ok: true, message: "", kind: "web" };
+  }
+
+  function copyText(text) {
+    return new Promise(function (resolve) {
+      var done = false;
+      function finish(ok) { if (!done) { done = true; resolve(ok); } }
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext) {
+          navigator.clipboard.writeText(text).then(function () { finish(true); }, function () { finish(legacyCopy(text)); });
+          setTimeout(function () { finish(false); }, 2500);
+          return;
+        }
+      } catch (err) { }
+      finish(legacyCopy(text));
+    });
+  }
+
+  function legacyCopy(text) {
+    var area = null, ok = false;
+    try {
+      area = document.createElement("textarea");
+      area.value = text;
+      area.setAttribute("readonly", "readonly");
+      area.style.position = "fixed";
+      area.style.top = "0";
+      area.style.left = "0";
+      area.style.opacity = "0";
+      document.body.appendChild(area);
+      area.focus();
+      area.select();
+      area.setSelectionRange(0, area.value.length);
+      ok = document.execCommand && document.execCommand("copy");
+    } catch (err) { ok = false; }
+    if (area && area.parentNode) area.parentNode.removeChild(area);
+    return !!ok;
+  }
+
+  function selectableField(text) {
+    var wrap = el("div", "notice__row");
+    var input = el("input", "input");
+    input.type = "text";
+    input.readOnly = true;
+    input.value = text;
+    input.setAttribute("aria-label", "Ссылка приглашения для ручного копирования");
+    input.addEventListener("focus", function () { input.select(); });
+    input.addEventListener("click", function () { input.select(); });
+    wrap.appendChild(input);
+    return wrap;
+  }
+
+  /* ============================================================
+     2. Схема, нормализация и проверка данных
+     ============================================================ */
+  function strOf(value) {
+    if (typeof value === "string") return value;
+    if (typeof value === "number" && isFinite(value)) return String(value);
+    return null;
+  }
+  function cut(value, max) {
+    return value.length > max ? value.slice(0, max) : value;
+  }
+
+  /* ---------- Состояние формы (черновик) ---------- */
+
+  function newDraft() {
+    return {
+      theme: APP.defaultTheme,
+      title: "",
+      date: "",
+      time: "",
+      timeZone: deviceTimeZone(),
+      venue: "",
+      address: "",
+      description: "",
+      agenda: []
+    };
+  }
+
+  /* Пояс события для черновика: из черновика, иначе пояс устройства. */
+  function inviteTimeZone(draft) {
+    if (draft && typeof draft.timeZone === "string" && isValidTimeZone(draft.timeZone)) return draft.timeZone;
+    return deviceTimeZone();
+  }
+
+  /* Восстановление состояния формы: структура и размеры проверяются,
+     незаконченный ввод (пустая дата, время, строки программы) сохраняется.
+     Старый формат (момент начала вместо даты и времени) читается отдельно. */
+  function normalizeDraftState(raw) {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+    /* Старый формат: программа не сохранялась, а момент начала лежал готовой ISO-строкой. */
+    var legacy = raw.agenda === undefined && isIsoInstant(raw.startsAt);
+    if (raw.v !== APP.draftSchemaVersion && !legacy) return null;
+
+    var draft = newDraft();
+    draft.theme = (typeof raw.theme === "string" && APP.themes.indexOf(raw.theme) >= 0) ? raw.theme : APP.defaultTheme;
+    draft.title = trimTo(strOf(raw.title) || "", APP.limits.title);
+    draft.venue = trimTo(strOf(raw.venue) || "", APP.limits.venue);
+    draft.address = trimTo(strOf(raw.address) || "", APP.limits.address);
+    draft.description = trimTo(strOf(raw.description) || "", APP.limits.description);
+
+    var tz = strOf(raw.timeZone);
+    draft.timeZone = (tz && isValidTimeZone(tz)) ? tz : deviceTimeZone();
+
+    if (legacy) {
+      /* Старый формат: дата и время хранились как абсолютный момент в поясе события. */
+      if (isIsoInstant(raw.startsAt)) {
+        var wall = instantToWall(Date.parse(raw.startsAt), draft.timeZone);
+        if (wall) { draft.date = wall.dateKey; draft.time = wall.hhmm; }
+      }
+    } else {
+      var date = strOf(raw.date);
+      if (date !== null && /^\d{4}-\d{2}-\d{2}$/.test(date.trim())) draft.date = date.trim();
+      var time = strOf(raw.time);
+      if (time !== null && /^([01]?\d|2[0-3]):[0-5]\d$/.test(time.trim())) draft.time = time.trim();
+    }
+
+    if (Array.isArray(raw.agenda)) {
+      for (var i = 0; i < raw.agenda.length && draft.agenda.length < APP.agendaMax; i++) {
+        var item = raw.agenda[i];
+        if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+        var t = strOf(item.time), l = strOf(item.label);
+        if (t === null || l === null) continue;
+        t = trimTo(t, APP.limits.agendaTime);
+        l = trimTo(l, APP.limits.agendaLabel);
+        if (t === "" && l === "") continue;
+        /* Некорректное время строки отбрасываем: такое значение не могло прийти из поля времени. */
+        if (t !== "" && !/^([01]?\d|2[0-3]):[0-5]\d$/.test(t)) continue;
+        draft.agenda.push({ time: t, label: l });
+      }
+    }
+    return draft;
+  }
+
+  /* ---------- Данные готового приглашения ---------- */
+
+  /* Данные приглашения всегда несут версию схемы: ссылка читается строго, но
+     то, что создаёт само приложение, обязано эту проверку проходить. */
+  function emptyInviteData() {
+    return {
+      v: APP.schemaVersion,
+      theme: APP.defaultTheme,
+      title: "",
+      startsAt: null,
+      timeZone: deviceTimeZone(),
+      venue: "",
+      address: "",
+      description: "",
+      agenda: []
+    };
+  }
+
+  /* Сборка данных приглашения из состояния формы. Пояс берётся из черновика. */
+  function aggregateFromDraft(draft) {
+    var data = emptyInviteData();
+    data.v = APP.schemaVersion;
+    data.timeZone = inviteTimeZone(draft);
+    data.theme = (draft && APP.themes.indexOf(draft.theme) >= 0) ? draft.theme : APP.defaultTheme;
+    data.title = trimTo(draft.title, APP.limits.title);
+    data.venue = trimTo(draft.venue, APP.limits.venue);
+    data.address = trimTo(draft.address, APP.limits.address);
+    data.description = trimTo(draft.description, APP.limits.description);
+
+    var wall = parseLocalDateTime(draft.date, draft.time);
+    if (wall && validCalendarParts(wall.y, wall.m, wall.d)) {
+      var ms = wallTimeToUtc(wall.y, wall.m, wall.d, wall.h, wall.min, data.timeZone);
+      if (isFinite(ms)) {
+        var back = instantToWall(ms, data.timeZone);
+        if (back && back.dateKey === pad4(wall.y) + "-" + pad2(wall.m) + "-" + pad2(wall.d) && back.hhmm === pad2(wall.h) + ":" + pad2(wall.min)) {
+          data.startsAt = new Date(ms).toISOString();
+        }
+      }
+    }
+    data.agenda = normalizeAgenda(draft.agenda);
+    return data;
+  }
+
+  function pad4(n) { var s = String(n); while (s.length < 4) s = "0" + s; return s; }
+
+  function trimTo(value, max) {
+    var s = typeof value === "string" ? value.trim() : "";
+    return s.length > max ? s.slice(0, max) : s;
+  }
+
+  /* Пункты программы для приглашения: время обязательно (ТЗ), подпись — нет.
+     Строки без времени остаются в черновике редактора, но на афишу не попадают. */
+  function normalizeAgenda(list) {
+    var out = [];
+    if (!Array.isArray(list)) return out;
+    for (var i = 0; i < list.length && out.length < APP.agendaMax; i++) {
+      var raw = list[i];
+      if (!raw || typeof raw !== "object") continue;
+      var time = trimTo(strOf(raw.time) || "", APP.limits.agendaTime);
+      if (/^\d:\d{2}$/.test(time)) time = "0" + time;
+      if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) continue;
+      var label = trimTo(strOf(raw.label) || "", APP.limits.agendaLabel);
+      out.push({ time: time, label: label });
+    }
+    return out;
+  }
+
+  function validCalendarParts(y, m, d) {
+    if (!isFinite(y) || !isFinite(m) || !isFinite(d)) return false;
+    if (y < 1900 || y > 2999) return false;
+    if (m < 1 || m > 12) return false;
+    if (d < 1 || d > daysInMonth(y, m)) return false;
+    return true;
+  }
+
+  function isIsoInstant(value) {
+    if (typeof value !== "string") return false;
+    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?(Z|[+-]\d{2}:\d{2})$/.test(value)) return false;
+    var ms = Date.parse(value);
+    if (!isFinite(ms)) return false;
+    /* Дата не должна «съезжать»: 30 февраля в ISO недопустимо. */
+    var d = new Date(ms);
+    var iso = d.toISOString();
+    var want = value.replace(/(\.\d{1,3})?(Z|[+-]\d{2}:\d{2})$/, "");
+    return iso.slice(0, 19) === want.slice(0, 19);
+  }
+
+  function isValidTimeZone(tz) {
+    if (typeof tz !== "string" || tz === "" || tz.length > 64) return false;
+    if (!/^[A-Za-z0-9_+\-/]+$/.test(tz)) return false;
+    try {
+      new Intl.DateTimeFormat("en-US", { timeZone: tz }).format(new Date());
+      return true;
+    } catch (err) { return false; }
+  }
+
+  /* Проверка полей редактора -> карта ошибок. */
+  function validateDraft(draft, opts) {
+    var errors = {};
+    var timeZone = (opts && opts.timeZone) || deviceTimeZone();    if (!draft.title || draft.title.trim() === "") errors.title = "Укажите название события.";
+    else if (draft.title.length > APP.limits.title) errors.title = "Название длиннее 70 символов (сейчас " + draft.title.length + ").";
+
+    var wall = parseLocalDateTime(draft.date, draft.time);
+    if (!draft.date || String(draft.date).trim() === "") {
+      errors.date = "Укажите дату события.";
+    } else if (!wall) {
+      errors.date = "Дата выглядит некорректно. Выберите дату в календаре.";
+    } else if (!validCalendarParts(wall.y, wall.m, wall.d)) {
+      errors.date = "Такой даты не существует. Проверьте число, месяц и год.";
+    }
+
+    if (!draft.time || String(draft.time).trim() === "") {
+      errors.time = "Укажите время начала.";
+    } else if (!/^(\d{1,2}):(\d{2})$/.test(String(draft.time))) {
+      errors.time = "Укажите время в формате часы:минуты.";
+    } else if (/^(\d{1,2}):(\d{2})$/.test(String(draft.time))) {
+      var tm = /^(\d{1,2}):(\d{2})$/.exec(String(draft.time));
+      if (parseInt(tm[1], 10) > 23 || parseInt(tm[2], 10) > 59) errors.time = "Такого времени не существует. Проверьте часы и минуты.";
+    }
+
+    if (!errors.date && !errors.time && wall) {
+      var ms = wallTimeToUtc(wall.y, wall.m, wall.d, wall.h, wall.min, timeZone);
+      var back = isFinite(ms) ? instantToWall(ms, timeZone) : null;
+      var expectedKey = pad4(wall.y) + "-" + pad2(wall.m) + "-" + pad2(wall.d);
+      if (!back || back.dateKey !== expectedKey || back.hhmm !== pad2(wall.h) + ":" + pad2(wall.min)) {
+        errors.time = "В этом часовом поясе такого местного времени нет (переход часов). Выберите другое время.";
+      }
+    }
+
+    if (!draft.venue || draft.venue.trim() === "") errors.venue = "Укажите название места.";
+    else if (draft.venue.length > APP.limits.venue) errors.venue = "Название места длиннее 80 символов (сейчас " + draft.venue.length + ").";
+
+    if (!draft.address || draft.address.trim() === "") errors.address = "Укажите адрес.";
+    else if (draft.address.length > APP.limits.address) errors.address = "Адрес длиннее 140 символов (сейчас " + draft.address.length + ").";
+
+    if (draft.description && draft.description.length > APP.limits.description) {
+      errors.description = "Описание длиннее 280 символов (сейчас " + draft.description.length + ").";
+    }
+
+    var filled = normalizeAgenda(draft.agenda);
+    if (Array.isArray(draft.agenda) && draft.agenda.length > APP.agendaMax) {
+      errors.agenda = "В программе не больше трёх пунктов.";
+    } else if (Array.isArray(draft.agenda)) {
+      /* У каждого пункта программы должно быть время. */
+      for (var i = 0; i < draft.agenda.length; i++) {
+        var item = draft.agenda[i];
+        if (!item || typeof item !== "object") continue;
+        var itemTime = trimTo(strOf(item.time) || "", APP.limits.agendaTime);
+        if (itemTime === "") continue;
+        if (!/^([01]?\d|2[0-3]):[0-5]\d$/.test(itemTime)) {
+          errors.agenda = "В программе укажите время в формате часы:минуты.";
+          break;
+        }
+      }
+    }
+    return { errors: errors, agenda: filled, items: draft.agenda, ok: Object.keys(errors).length === 0 };
+  }
+
+  /* Полная проверка данных из ссылки. Версия схемы проверяется строго:
+     черновики редактора сюда не попадают — у них своя проверка. */
+  function normalizeInvite(raw) {
+    var problems = [];
+    var data = emptyInviteData();
+    function problem(msg) { if (problems.indexOf(msg) < 0) problems.push(msg); }
+
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+      return { ok: false, problems: ["Данные приглашения не распознаны."], data: data };
+    }
+    if (raw.v !== APP.schemaVersion) {
+      problem("Версия данных не поддерживается.");
+    }
+
+    var theme = typeof raw.theme === "string" ? raw.theme.trim() : "";
+    if (theme === "") { data.theme = APP.defaultTheme; }
+    else if (APP.themes.indexOf(theme) >= 0) { data.theme = theme; }
+    else { data.theme = APP.defaultTheme; problem("Неизвестное оформление."); }
+
+    var timeZone = strOf(raw.timeZone);
+    if (timeZone === null || timeZone === "") {
+      data.timeZone = "UTC";
+      problem("Не указан часовой пояс события.");
+    } else if (!isValidTimeZone(timeZone)) {
+      data.timeZone = "UTC";
+      problem("Часовой пояс не распознан.");
+    } else {
+      data.timeZone = timeZone;
+    }
+
+    if (!isIsoInstant(raw.startsAt)) {
+      problem("Некорректная дата или время начала.");
+    } else {
+      data.startsAt = new Date(Date.parse(raw.startsAt)).toISOString();
+    }
+
+    data.title = field(raw.title, APP.limits.title, "Название события", problem);
+    data.venue = field(raw.venue, APP.limits.venue, "Название места", problem);
+    data.address = field(raw.address, APP.limits.address, "Адрес", problem);
+    data.description = optionalField(raw.description, APP.limits.description, "Описание", problem);
+
+    if (raw.agenda === undefined || raw.agenda === null) {
+      data.agenda = [];
+    } else if (!Array.isArray(raw.agenda)) {
+      problem("Программа должна быть списком.");
+      data.agenda = [];
+    } else if (raw.agenda.length > APP.limits.agendaItems) {
+      problem("В программе больше трёх пунктов.");
+      data.agenda = [];
+    } else {
+      var items = [];
+      for (var i = 0; i < raw.agenda.length; i++) {
+        var item = raw.agenda[i];
+        if (!item || typeof item !== "object" || Array.isArray(item)) { problem("Пункт программы повреждён."); continue; }
+        var t = strOf(item.time), l = strOf(item.label);
+        if (t === null || l === null) { problem("Пункт программы повреждён."); continue; }
+        if (t.length > APP.limits.agendaTime || l.length > APP.limits.agendaLabel) { problem("Пункт программы слишком длинный."); continue; }
+        var tNorm = t.trim();
+        if (!/^([01]?\d|2[0-3]):[0-5]\d$/.test(tNorm)) { problem("Время пункта программы некорректно."); continue; }
+        var lNorm = l.trim();
+        if (lNorm === "") continue;
+        items.push({ time: formatAgendaTime(tNorm), label: lNorm });
+      }
+      data.agenda = items;
+    }
+
+    if (!data.startsAt) problem("Не удалось определить дату события.");
+    if (data.title === "") problem("Не указано название события.");
+    if (data.venue === "") problem("Не указано название места.");
+    if (data.address === "") problem("Не указан адрес.");
+
+    return { ok: problems.length === 0, problems: problems, data: data };
+  }
+
+  function field(value, max, label, problem) {
+    if (value === undefined || value === null) {
+      problem("Поле «" + label + "» отсутствует.");
+      return "";
+    }
+    if (typeof value !== "string" && typeof value !== "number") {
+      problem("Поле «" + label + "» имеет неверный тип.");
+      return "";
+    }
+    var s = String(value);
+    if (s.length > max) { problem("Поле «" + label + "» длиннее " + max + " символов."); return s.slice(0, max); }
+    return s.trim();
+  }
+
+  function optionalField(value, max, label, problem) {
+    if (value === undefined || value === null) return "";
+    if (typeof value !== "string" && typeof value !== "number") {
+      problem("Поле «" + label + "» имеет неверный тип.");
+      return "";
+    }
+    var s = String(value);
+    if (s.length > max) { problem("Поле «" + label + "» длиннее " + max + " символов."); return s.slice(0, max); }
+    return s.trim();
+  }
+
+  /* Демонстрационный пример: 20 календарных дней вперёд от даты устройства, начало в 18:00.
+     Подставляется только при первом открытии, когда своего черновика ещё нет. */
+  function demoDraft() {
+    var now = new Date();
+    var target = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 20, 18, 0, 0, 0);
+    return {
+      theme: APP.defaultTheme,
+      title: "Вечеринка на крыше",
+      date: pad4(target.getFullYear()) + "-" + pad2(target.getMonth() + 1) + "-" + pad2(target.getDate()),
+      time: "18:00",
+      timeZone: deviceTimeZone(),
+      venue: "Лофт «Искра»",
+      address: "Пример адреса: улица Примерная, 12 — образец, замените на свой",
+      description: "Собираем любимых людей, включаем музыку и отмечаем вместе",
+      agenda: [
+        { time: "18:00", label: "Встреча гостей" },
+        { time: "19:00", label: "Праздничный ужин" },
+        { time: "20:00", label: "Музыка и танцы" }
+      ]
+    };
+  }
+
+  /* ============================================================
+     3. Состояние и хранилище
+     ============================================================ */
+  var state = {
+    mode: "editor",
+    draft: newDraft(),
+    guest: null,
+    guestFromLink: false,
+    dirty: false
+  };
+
+  var storage = { available: true, reason: "" };
+
+  function storageTest() {
+    try {
+      var key = APP.draftKey + ".probe";
+      window.localStorage.setItem(key, "1");
+      window.localStorage.removeItem(key);
+      storage.available = true;
+    } catch (err) {
+      storage.available = false;
+      storage.reason = (err && err.name) ? err.name : "unknown";
+    }
+    return storage.available;
+  }
+
+  function loadDraft() {
+    if (!storage.available) return null;
+    try {
+      var raw = window.localStorage.getItem(APP.draftKey);
+      if (!raw) return null;
+      return normalizeDraftState(JSON.parse(raw));
+    } catch (err) { return null; }
+  }
+
+  /* Сохраняем состояние формы, а не готовое приглашение: незаконченные
+     дата, время и строки программы должны переживать перезагрузку. */
+  function saveDraft() {
+    if (!storage.available) return false;
+    try {
+      window.localStorage.setItem(APP.draftKey, JSON.stringify({
+        v: APP.draftSchemaVersion,
+        theme: state.draft.theme,
+        title: state.draft.title,
+        date: state.draft.date,
+        time: state.draft.time,
+        timeZone: inviteTimeZone(state.draft),
+        venue: state.draft.venue,
+        address: state.draft.address,
+        description: state.draft.description,
+        agenda: state.draft.agenda.map(function (item) {
+          return { time: strOf(item && item.time) || "", label: strOf(item && item.label) || "" };
+        })
+      }));
+      return true;
+    } catch (err) {
+      storage.available = false;
+      storage.reason = "quota";
+      showNotice({
+        kind: "warn",
+        text: "Не удалось сохранить черновик: хранилище браузера недоступно или заполнено. Приложение продолжит работать, но черновик не сохранится после закрытия."
+      });
+      return false;
+    }
+  }
+
+  /* ============================================================
+     4. Уведомления
+     ============================================================ */
+  var noticeTimer = null;
+  function showNotice(opts) {
+    var box = $("notice");
+    if (!box) return;
+    clearNode(box);
+    box.className = "notice" + (opts.kind === "error" ? " notice--error" : "") + (opts.kind === "ok" ? "" : "");
+    var strong = el("strong", null, opts.title || (opts.kind === "error" ? "Не получилось. " : (opts.kind === "ok" ? "" : "Внимание. ")));
+    var text = document.createTextNode(opts.text || "");
+    box.appendChild(strong);
+    box.appendChild(text);
+    if (opts.extra) box.appendChild(opts.extra);
+    if (opts.action) {
+      var row = el("div", "notice__row");
+      row.appendChild(opts.action);
+      box.appendChild(row);
+    }
+    box.hidden = false;
+    box.setAttribute("role", opts.kind === "error" ? "alert" : "status");
+    if (noticeTimer) { window.clearTimeout(noticeTimer); noticeTimer = null; }
+    if (opts.kind === "ok" && !opts.sticky) {
+      noticeTimer = window.setTimeout(function () { hideNotice(); }, 6000);
+    }
+  }
+  function hideNotice() {
+    var box = $("notice");
+    if (!box) return;
+    box.hidden = true;
+    clearNode(box);
+  }
+
+  /* ============================================================
+     5. Визуальные помощники приглашения
+     ============================================================ */
+  var ICONS = {
+    clock: function () {
+      var svg = svgEl("svg", { viewBox: "0 0 32 32", fill: "none", "aria-hidden": "true", class: "info__icon" });
+      svg.appendChild(svgEl("circle", { cx: "16", cy: "16", r: "12.4", stroke: "currentColor", "stroke-width": "2.2" }));
+      svg.appendChild(svgEl("path", { d: "M16 9.4V16l4.8 3.1", stroke: "currentColor", "stroke-width": "2.2", "stroke-linecap": "round", "stroke-linejoin": "round" }));
+      return svg;
+    },
+    pin: function () {
+      var svg = svgEl("svg", { viewBox: "0 0 32 32", fill: "none", "aria-hidden": "true", class: "info__icon" });
+      svg.appendChild(svgEl("path", { d: "M16 28.5s9-8.2 9-14.4A9 9 0 0 0 7 14.1C7 20.3 16 28.5 16 28.5Z", stroke: "currentColor", "stroke-width": "2.2", "stroke-linejoin": "round" }));
+      svg.appendChild(svgEl("circle", { cx: "16", cy: "13.8", r: "3.5", stroke: "currentColor", "stroke-width": "2.2" }));
+      return svg;
+    },
+    globe: function () {
+      var svg = svgEl("svg", { viewBox: "0 0 20 20", fill: "none", "aria-hidden": "true" });
+      svg.appendChild(svgEl("circle", { cx: "10", cy: "10", r: "7.4", stroke: "currentColor", "stroke-width": "1.7" }));
+      svg.appendChild(svgEl("path", { d: "M2.6 10h14.8M10 2.6c2.4 2.2 3.6 4.6 3.6 7.4S12.4 15.2 10 17.4C7.6 15.2 6.4 12.8 6.4 10S7.6 4.8 10 2.6Z", stroke: "currentColor", "stroke-width": "1.5" }));
+      return svg;
+    },
+    calendar: function () {
+      var svg = svgEl("svg", { viewBox: "0 0 32 32", fill: "none", "aria-hidden": "true", class: "info__icon" });
+      svg.appendChild(svgEl("rect", { x: "4.5", y: "7", width: "23", height: "20.5", rx: "4", stroke: "currentColor", "stroke-width": "2.2" }));
+      svg.appendChild(svgEl("path", { d: "M4.5 13.6h23M11 4.6v4.4M21 4.6v4.4", stroke: "currentColor", "stroke-width": "2.2", "stroke-linecap": "round" }));
+      return svg;
+    },
+    copy: function () {
+      var svg = svgEl("svg", { viewBox: "0 0 20 20", fill: "none", "aria-hidden": "true" });
+      svg.appendChild(svgEl("rect", { x: "7", y: "7", width: "9.5", height: "9.5", rx: "2.6", stroke: "currentColor", "stroke-width": "1.8" }));
+      svg.appendChild(svgEl("path", { d: "M12.6 4.2H6.4A2.2 2.2 0 0 0 4.2 6.4v6.2", stroke: "currentColor", "stroke-width": "1.8", "stroke-linecap": "round" }));
+      return svg;
+    },
+    check: function () {
+      var svg = svgEl("svg", { viewBox: "0 0 20 20", fill: "none", "aria-hidden": "true" });
+      svg.appendChild(svgEl("path", { d: "M4.4 10.6l3.6 3.6 7.6-8", stroke: "currentColor", "stroke-width": "2.2", "stroke-linecap": "round", "stroke-linejoin": "round" }));
+      return svg;
+    },
+    star: function (size) {
+      var svg = svgEl("svg", { viewBox: "0 0 24 24", width: size, height: size, fill: "none", "aria-hidden": "true" });
+      svg.appendChild(svgEl("path", { d: "M12 2.6l2.2 6.2 6.2 2.2-6.2 2.2L12 19.4l-2.2-6.2L3.6 11l6.2-2.2L12 2.6Z", fill: "currentColor" }));
+      return svg;
+    }
+  };
+
+  function decorFor(theme, idSeed) {
+    var wrap = el("div", "card__deco");
+    wrap.setAttribute("aria-hidden", "true");
+    var i;
+    if (theme === "electric") {
+      var glow = el("span", "deco deco--glow"); wrap.appendChild(glow);
+      var blob = el("span", "deco deco--blob"); wrap.appendChild(blob);
+      var ring = el("span", "deco deco--ring"); wrap.appendChild(ring);
+      var sq = el("span", "deco deco--sq"); wrap.appendChild(sq);
+      var stars = [[12, 8, 20], [86, 26, 14], [70, 78, 17], [24, 62, 12]];
+      for (i = 0; i < stars.length; i++) {
+        var st = el("span", "deco deco--star");
+        st.style.left = stars[i][0] + "%";
+        st.style.top = stars[i][1] + "%";
+        st.style.animationDelay = (i * 0.7) + "s";
+        st.appendChild(ICONS.star(stars[i][2]));
+        wrap.appendChild(st);
+      }
+      var conf = [[40, 14, 8, 8, -18], [62, 8, 6, 12, 24], [30, 88, 10, 6, 12], [80, 60, 7, 7, -30], [54, 46, 6, 10, 8]];
+      for (i = 0; i < conf.length; i++) {
+        var c = el("span", "deco deco--conf");
+        c.style.left = conf[i][0] + "%";
+        c.style.top = conf[i][1] + "%";
+        c.style.width = conf[i][2] + "px";
+        c.style.height = conf[i][3] + "px";
+        c.style.transform = "rotate(" + conf[i][4] + "deg)";
+        c.style.animationDelay = (i * 0.5) + "s";
+        wrap.appendChild(c);
+      }
+    } else if (theme === "sunset") {
+      wrap.appendChild(el("span", "deco deco--glow"));
+      wrap.appendChild(el("span", "deco deco--blob"));
+      wrap.appendChild(el("span", "deco deco--ring"));
+      wrap.appendChild(el("span", "deco deco--sq"));
+      var rays = [[78, 12, 22], [88, 34, 16], [66, 6, 13], [18, 74, 18], [10, 46, 13]];
+      for (i = 0; i < rays.length; i++) {
+        var s = el("span", "deco deco--star");
+        s.style.left = rays[i][0] + "%";
+        s.style.top = rays[i][1] + "%";
+        s.style.animationDelay = (i * 0.6) + "s";
+        s.appendChild(ICONS.star(rays[i][2]));
+        wrap.appendChild(s);
+      }
+    } else {
+      wrap.appendChild(el("span", "deco deco--glow"));
+      wrap.appendChild(el("span", "deco deco--blob"));
+      wrap.appendChild(el("span", "deco deco--ring"));
+      wrap.appendChild(el("span", "deco deco--sq"));
+      var candy = [[16, 16, 18], [82, 12, 15], [72, 82, 20], [30, 86, 13]];
+      for (i = 0; i < candy.length; i++) {
+        var cs = el("span", "deco deco--star");
+        cs.style.left = candy[i][0] + "%";
+        cs.style.top = candy[i][1] + "%";
+        cs.style.animationDelay = (i * 0.45) + "s";
+        cs.appendChild(ICONS.star(candy[i][2]));
+        wrap.appendChild(cs);
+      }
+      var confs = [[46, 10, 9, 9, 20], [58, 24, 7, 11, -14], [12, 58, 8, 8, 0], [88, 62, 6, 10, 26]];
+      for (i = 0; i < confs.length; i++) {
+        var cc = el("span", "deco deco--conf");
+        cc.style.left = confs[i][0] + "%";
+        cc.style.top = confs[i][1] + "%";
+        cc.style.width = confs[i][2] + "px";
+        cc.style.height = confs[i][3] + "px";
+        cc.style.transform = "rotate(" + confs[i][4] + "deg)";
+        cc.style.animationDelay = (i * 0.55) + "s";
+        wrap.appendChild(cc);
+      }
+    }
+    return wrap;
+  }
+
+  /* Состояние отсчёта. Сравниваем календарные даты в поясе события как строки ГГГГ-ММ-ДД. */
+  function countdownKind(data, nowMs) {
+    var start = Date.parse(data.startsAt);
+    if (!isFinite(start)) return { kind: "started", ms: 0 };
+    if (nowMs < start) return { kind: "before", ms: start - nowMs };
+    var nowWall = instantToWall(nowMs, data.timeZone);
+    var startWall = instantToWall(start, data.timeZone);
+    if (nowWall && startWall) {
+      if (nowWall.dateKey === startWall.dateKey) return { kind: "started", ms: 0 };
+      if (nowWall.dateKey > startWall.dateKey) return { kind: "passed", ms: 0 };
+    }
+    return { kind: "started", ms: 0 };
+  }
+
+  function breakdown(ms) {
+    var total = Math.max(0, Math.floor(ms / 1000));
+    return {
+      days: Math.floor(total / 86400),
+      hours: Math.floor((total % 86400) / 3600),
+      minutes: Math.floor((total % 3600) / 60),
+      seconds: total % 60
+    };
+  }
+
+  function countCells(kind) {
+    var grid = el("div", "count__grid");
+    var values = {
+      days: kind.kind === "before" ? String(kind.ms.days) : "0",
+      hours: kind.kind === "before" ? String(kind.ms.hours) : "0",
+      minutes: kind.kind === "before" ? String(kind.ms.minutes) : "0",
+      seconds: kind.kind === "before" ? String(kind.ms.seconds) : "0"
+    };
+    var order = ["days", "hours", "minutes", "seconds"];
+    for (var i = 0; i < order.length; i++) {
+      var key = order[i];
+      var cell = el("div", "count__cell");
+      var val = el("div", "count__val", values[key]);
+      val.dataset.role = "count-" + key;
+      val.style.fontVariantNumeric = "tabular-nums";
+      if (key === "seconds") val.setAttribute("aria-live", "polite");
+      var lbl = el("div", "count__lbl", pluralize(parseInt(values[key], 10), COUNT_LABELS[key]));
+      lbl.dataset.role = "count-label-" + key;
+      cell.appendChild(val);
+      cell.appendChild(lbl);
+      grid.appendChild(cell);
+    }
+    return grid;
+  }
+
+  function valueEl(root, role) { return root.querySelector('[data-role="' + role + '"]'); }
+
+  /* ============================================================
+     6. Построение карточки приглашения
+     ============================================================ */
+  function buildTitle(title) {
+    var h = el("h2", "hero__title");
+    var words = String(title).trim().split(/\s+/);
+    if (words.length >= 2) {
+      var last = words.pop();
+      h.appendChild(document.createTextNode(words.join(" ") + " "));
+      var accent = el("span", "hero__title-accent", last);
+      h.appendChild(accent);
+    } else {
+      h.appendChild(document.createTextNode(String(title).trim()));
+    }
+    return h;
+  }
+
+  function buildCalendar(data, startWall) {
+    var cal = el("div", "cal cal--lime");
+    cal.dataset.block = "calendar";
+    var top = el("div", "cal__top");
+    top.appendChild(el("span", "cal__badge", "Дата"));
+    top.appendChild(el("span", "cal__year", startWall.y));
+    cal.appendChild(top);
+    cal.appendChild(el("div", "cal__day", startWall.d));
+    cal.appendChild(el("div", "cal__month", MONTHS[startWall.m - 1]));
+    cal.appendChild(el("div", "cal__weekday", WEEKDAYS_NOM[startWall.weekdayIndex]));
+    var frame = svgEl("svg", { viewBox: "0 0 120 120", class: "cal__frame", "aria-hidden": "true", fill: "none" });
+    frame.appendChild(svgEl("circle", { cx: "60", cy: "60", r: "46", stroke: "currentColor", "stroke-width": "2", "stroke-dasharray": "7 9" }));
+    frame.appendChild(svgEl("circle", { cx: "60", cy: "60", r: "30", stroke: "currentColor", "stroke-width": "1.4" }));
+    cal.appendChild(frame);
+    return cal;
+  }
+
+  function buildTimeCard(data, startWall) {
+    var card = el("div", "info");
+    card.dataset.block = "time";
+    var label = el("div", "info__label info__label--accent");
+    label.appendChild(ICONS.clock());
+    label.appendChild(el("span", null, "Начало"));
+    card.appendChild(label);
+    card.appendChild(el("div", "info__main", startWall.hhmm));
+    card.appendChild(el("div", "info__sub", WEEKDAYS_ACC[startWall.weekdayIndex] + ", " + formatWallDate(startWall, "long")));
+    var tz = el("div", "info__tz");
+    tz.appendChild(ICONS.globe());
+    var zoneText = timeZoneLabel(data.timeZone, Date.parse(data.startsAt));
+    var tzSpan = el("span", null, zoneText);
+    tzSpan.dataset.role = "event-zone";
+    tz.appendChild(tzSpan);
+    var ianaSpan = el("span", null, data.timeZone);
+    ianaSpan.dataset.role = "event-zone-iana";
+    tz.appendChild(ianaSpan);
+    card.appendChild(tz);
+    return card;
+  }
+
+  function buildPlaceCard(data, opts) {
+    var card = el("div", "info");
+    card.dataset.block = "place";
+    var label = el("div", "info__label");
+    label.appendChild(ICONS.pin());
+    label.appendChild(el("span", null, "Место"));
+    card.appendChild(label);
+    card.appendChild(el("div", "info__main", data.venue));
+    card.appendChild(el("div", "info__sub", data.address));
+    var actions = el("div", "info__actions");
+    var btn = el("button", "chip");
+    btn.type = "button";
+    btn.appendChild(ICONS.copy());
+    var span = el("span", null, "Скопировать адрес");
+    btn.appendChild(span);
+    btn.addEventListener("click", function () { copyAddress(data.address, btn); });
+    actions.appendChild(btn);
+    card.appendChild(actions);
+    if (opts && opts.showTzNote && data.timeZone !== deviceTimeZone()) {
+      var note = el("div", "info__tz");
+      note.appendChild(ICONS.globe());
+      note.appendChild(el("span", null, "У вас время показано в поясе " + data.timeZone + " — момент начала общий."));
+      card.appendChild(note);
+    }
+    return card;
+  }
+
+  function buildCountdown(data) {
+    var start = Date.parse(data.startsAt);
+    var nowMs = Date.now();
+    var kind = countdownKind(data, nowMs);
+    var box = el("div", "count");
+    box.dataset.block = "countdown";
+    var head = el("div", "count__head");
+    head.appendChild(el("h3", "count__title", "Обратный отсчёт"));
+    var stateEl = el("div", "count__state");
+    stateEl.dataset.role = "count-state";
+    head.appendChild(stateEl);
+    box.appendChild(head);
+    if (kind.kind === "before") {
+      box.appendChild(countCells({ kind: "before", ms: breakdown(kind.ms) }));
+      stateEl.textContent = "до начала";
+    } else {
+      box.appendChild(countCells({ kind: kind.kind, ms: breakdown(0) }));
+      stateEl.textContent = kind.kind === "started" ? "Событие началось" : "Дата события уже прошла";
+    }
+    box.dataset.starts = data.startsAt;
+    box.dataset.tz = data.timeZone;
+    return box;
+  }
+
+  function updateCountdown(root, data) {
+    var box = root.querySelector(".count");
+    if (!box) return;
+    var kind = countdownKind(data, Date.now());
+    var stateEl = valueEl(box, "count-state");
+    if (kind.kind === "before") {
+      var parts = breakdown(kind.ms);
+      var keys = ["days", "hours", "minutes", "seconds"];
+      for (var i = 0; i < keys.length; i++) {
+        var v = valueEl(box, "count-" + keys[i]);
+        var l = valueEl(box, "count-label-" + keys[i]);
+        if (v) {
+          var text = String(parts[keys[i]]);
+          if (v.textContent !== text) v.textContent = text;
+        }
+        if (l) {
+          var lbl = pluralize(parts[keys[i]], COUNT_LABELS[keys[i]]);
+          if (l.textContent !== lbl) l.textContent = lbl;
+        }
+      }
+      if (stateEl) stateEl.textContent = "до начала";
+    } else {
+      var zeroKeys = ["days", "hours", "minutes", "seconds"];
+      for (var j = 0; j < zeroKeys.length; j++) {
+        var zv = valueEl(box, "count-" + zeroKeys[j]);
+        if (zv && zv.textContent !== "0") zv.textContent = "0";
+      }
+      if (stateEl) stateEl.textContent = kind.kind === "started" ? "Событие началось" : "Дата события уже прошла";
+    }
+  }
+
+  function buildAgendaBlock(data) {
+    if (!data.agenda || !data.agenda.length) return null;
+    var wrap = el("section", "agenda");
+    wrap.dataset.block = "agenda";
+    wrap.appendChild(el("h3", "agenda__title", "Программа"));
+    var tl = el("div", "timeline");
+    for (var i = 0; i < data.agenda.length; i++) {
+      var item = el("div", "tl__item");
+      var body = el("div", "tl__body");
+      if (String(data.agenda[i].time || "").length > 5) item.className = "tl__item tl__item--stacked";
+      item.appendChild(el("span", "tl__dot"));
+      body.appendChild(el("span", "tl__time", formatAgendaTime(data.agenda[i].time)));
+      body.appendChild(el("span", "tl__label", data.agenda[i].label));
+      item.appendChild(body);
+      tl.appendChild(item);
+    }
+    wrap.appendChild(tl);
+    return wrap;
+  }
+
+  /* Состояние, которое пересчитывается каждую секунду. */
+  var tickState = { mount: null, data: null, timer: null };
+
+  function renderInvite(mount, data, opts) {
+    var options = opts || {};
+    clearNode(mount);
+    var startWall = instantToWall(Date.parse(data.startsAt), data.timeZone);
+    var startIdx = startWall ? startWall.weekdayIndex : 0;
+    if (!startWall) startWall = instantToWall(Date.parse(data.startsAt), "UTC");
+    if (startWall && startWall.weekdayIndex === undefined) startWall.weekdayIndex = weekdayIndexFromParts(startWall.y, startWall.m, startWall.d);
+
+    var card = el("article", "card card--appear" + (options.guest ? " card--guest" : " card--preview"));
+    card.dataset.theme = data.theme;
+    card.setAttribute("aria-label", "Приглашение: " + data.title);
+    card.appendChild(decorFor(data.theme));
+
+    var body = el("div", "card__body");
+    var hero = el("header", "hero");
+    var kicker = el("p", "hero__kicker");
+    kicker.appendChild(el("span", "hero__kicker-dot"));
+    kicker.appendChild(el("span", null, "Приглашение"));
+    hero.appendChild(kicker);
+    hero.appendChild(buildTitle(data.title));
+    var bars = el("div", "hero__bars");
+    bars.appendChild(el("span", "bar bar--a"));
+    bars.appendChild(el("span", "bar bar--b"));
+    bars.appendChild(el("span", "bar bar--c"));
+    hero.appendChild(bars);
+    body.appendChild(hero);
+
+    var grid = el("div", "grid-2");
+    grid.appendChild(buildCalendar(data, startWall));
+    grid.appendChild(buildTimeCard(data, startWall));
+    body.appendChild(grid);
+
+    body.appendChild(buildPlaceCard(data, { showTzNote: !!options.guest }));
+
+    var count = buildCountdown(data);
+    body.appendChild(count);
+
+    var agenda = buildAgendaBlock(data);
+    if (agenda) body.appendChild(agenda);
+
+    if (data.description && data.description.trim() !== "") {
+      var note = el("p", "note", data.description);
+      note.dataset.block = "description";
+      body.appendChild(note);
+    }
+
+    var foot = el("footer", "card__foot");
+    foot.appendChild(el("span", "dot"));
+    foot.appendChild(el("span", null, timeZoneLabel(data.timeZone, Date.parse(data.startsAt)) + " · " + data.timeZone));
+    var marks = el("span", "card__marks");
+    marks.appendChild(el("i")); marks.appendChild(el("i")); marks.appendChild(el("i"));
+    foot.appendChild(marks);
+    body.appendChild(foot);
+
+    card.appendChild(body);
+    mount.appendChild(card);
+
+    startTicker(mount, data);
+    return card;
+  }
+
+  function weekdayIndexFromParts(y, m, d) {
+    var wd = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+    return wd;
+  }
+
+  function startTicker(mount, data) {
+    stopTicker();
+    tickState.mount = mount;
+    tickState.data = data;
+    updateCountdown(mount, data);
+    tickState.timer = window.setInterval(function () {
+      if (!tickState.mount || !tickState.data) return;
+      updateCountdown(tickState.mount, tickState.data);
+    }, 1000);
+  }
+  function stopTicker() {
+    if (tickState.timer) { window.clearInterval(tickState.timer); tickState.timer = null; }
+  }
+
+  /* ============================================================
+     7. Копирование
+     ============================================================ */
+  function copyAddress(address, button) {
+    copyText(address).then(function (ok) {
+      if (ok) {
+        flashChip(button, "Адрес скопирован");
+      } else {
+        showNotice({
+          kind: "info",
+          title: "Скопируйте адрес вручную. ",
+          text: "",
+          extra: selectableField(address)
+        });
+      }
+    });
+  }
+
+  function flashChip(button, text) {
+    if (!button) return;
+    var span = button.querySelector("span");
+    if (!span) return;
+    var original = span.textContent;
+    span.textContent = text;
+    button.classList.add("chip--solid");
+    var icon = button.querySelector("svg");
+    if (icon && !button.dataset.swapped) {
+      var check = ICONS.check();
+      button.dataset.swapped = "1";
+      button.replaceChild(check, icon);
+    }
+    window.setTimeout(function () {
+      span.textContent = original;
+      button.classList.remove("chip--solid");
+      var nowIcon = button.querySelector("svg");
+      if (button.dataset.swapped && nowIcon) {
+        button.replaceChild(ICONS.copy(), nowIcon);
+        delete button.dataset.swapped;
+      }
+    }, 2200);
+  }
+
+  function handleCopyLink() {
+    var ctx = shareContext();
+    if (!ctx.ok) {
+      showNotice({
+        kind: "info",
+        title: "Локальный файл. ",
+        text: ctx.message,
+        sticky: true
+      });
+      return;
+    }
+    /* Полная проверка готовности приглашения — только перед созданием ссылки. */
+    var check = validateDraft(state.draft, { timeZone: inviteTimeZone(state.draft) });
+    if (!check.ok) {
+      renderErrors(check.errors);
+      showNotice({ kind: "error", title: "Проверьте поля. ", text: "Ссылка не создана: в приглашении есть незаполненные или некорректные поля." });
+      return;
+    }
+    var data = aggregateFromDraft(state.draft);
+    var link = buildLink(data);
+    if (link.length > APP.maxLinkLength) {
+      showNotice({
+        kind: "error",
+        title: "Ссылка слишком длинная. ",
+        text: "Получилось " + link.length + " символов из " + APP.maxLinkLength + " допустимых. Сократите описание или программу — данные не обрезаются автоматически."
+      });
+      return;
+    }
+    copyText(link).then(function (ok) {
+      if (ok) {
+        showNotice({ kind: "ok", title: "Ссылка скопирована. ", text: "Отправьте её гостям: в ней " + link.length + " символов." });
+      } else {
+        showNotice({
+          kind: "info",
+          title: "Скопируйте ссылку вручную. ",
+          text: "Автоматическое копирование недоступно. Выделите ссылку и скопируйте её.",
+          extra: selectableField(link),
+          sticky: true
+        });
+      }
+    });
+  }
+
+  /* ============================================================
+     8. Редактор
+     ============================================================ */
+  var refs = {};
+  function cacheRefs() {
+    ["fTitle","fDate","fTime","fVenue","fAddress","fDescription",
+     "cTitle","cVenue","cAddress","cDescription","cDescription",
+     "eTitle","eDate","eTime","eVenue","eAddress","eDescription",
+     "tzShort","hTime","agendaList","agendaMeta","agendaEmpty","btnAddAgenda",
+     "themeList","previewMount","editorPane","previewPane","layout",
+     "btnGuest","btnGuestLabel","btnCopy","btnCopyLabel","guestRoot","btnJump",
+     "shell","previewLabel","previewMeta","demoNote","hintExtra","brandTag"
+    ].forEach(function (id) { refs[id] = $(id); });
+  }
+
+  function syncEditorFromDraft() {
+    refs.fTitle.value = state.draft.title;
+    refs.fDate.value = state.draft.date;
+    refs.fTime.value = state.draft.time;
+    refs.fVenue.value = state.draft.venue;
+    refs.fAddress.value = state.draft.address;
+    refs.fDescription.value = state.draft.description;
+    renderAgendaRows();
+    renderThemeCards();
+    updateCounters();
+    updateTimeHints();
+  }
+
+  function updateCounters() {
+    refs.cTitle.textContent = state.draft.title.length + "/" + APP.limits.title;
+    refs.cVenue.textContent = state.draft.venue.length + "/" + APP.limits.venue;
+    refs.cAddress.textContent = state.draft.address.length + "/" + APP.limits.address;
+    refs.cDescription.textContent = state.draft.description.length + "/" + APP.limits.description;
+    [["cTitle", APP.limits.title, state.draft.title.length],
+     ["cVenue", APP.limits.venue, state.draft.venue.length],
+     ["cAddress", APP.limits.address, state.draft.address.length],
+     ["cDescription", APP.limits.description, state.draft.description.length]].forEach(function (row) {
+      var node = refs[row[0]];
+      if (node) node.classList.toggle("is-over", row[2] > row[1]);
+    });
+  }
+
+  function updateTimeHints() {
+    var zone = inviteTimeZone(state.draft);
+    refs.tzShort.textContent = shortTimeZoneLabel(zone);
+    var wall = parseLocalDateTime(state.draft.date, state.draft.time);
+    if (wall && validCalendarParts(wall.y, wall.m, wall.d)) {
+      var ms = wallTimeToUtc(wall.y, wall.m, wall.d, wall.h, wall.min, zone);
+      var back = isFinite(ms) ? instantToWall(ms, zone) : null;
+      if (back && back.dateKey === pad4(wall.y) + "-" + pad2(wall.m) + "-" + pad2(wall.d)) {
+        refs.hTime.textContent = timeZoneLabel(zone, ms) + ". У гостей момент начала не изменится.";
+        return;
+      }
+    }
+    refs.hTime.textContent = timeZoneLabel(zone, Date.now()) + ". Время начала указывается в поясе события.";
+  }
+
+  function renderAgendaRows() {
+    var list = refs.agendaList;
+    clearNode(list);
+    var items = state.draft.agenda;
+    for (var i = 0; i < items.length; i++) {
+      list.appendChild(buildAgendaRow(items[i], i));
+    }
+    refs.agendaMeta.textContent = items.length + "/" + APP.agendaMax;
+    refs.agendaEmpty.hidden = items.length > 0;
+    refs.btnAddAgenda.disabled = items.length >= APP.agendaMax;
+    refs.btnAddAgenda.setAttribute("aria-disabled", items.length >= APP.agendaMax ? "true" : "false");
+  }
+
+  function buildAgendaRow(item, index) {
+    var row = el("div", "agenda__item");
+
+    /* Название пункта — отдельной строкой на всю доступную ширину. */
+    var labelField = el("div", "field field--label");
+    var labelId = "agLabel" + index;
+    var labelText = el("label", "field__label", "Название пункта " + (index + 1));
+    labelText.setAttribute("for", labelId);
+    var labelInput = el("input", "input");
+    labelInput.type = "text";
+    labelInput.id = labelId;
+    labelInput.maxLength = APP.limits.agendaLabel;
+    labelInput.placeholder = "Например: Праздничный ужин";
+    labelInput.value = item.label || "";
+    labelInput.setAttribute("aria-label", "Название пункта " + (index + 1));
+    labelInput.addEventListener("input", function () {
+      state.draft.agenda[index].label = labelInput.value;
+      clearFieldError("agenda");
+      onDraftChanged();
+    });
+    labelField.appendChild(labelText);
+    labelField.appendChild(labelInput);
+
+    /* Время и удаление — компактно в одной строке под названием. */
+    var timeField = el("div", "field");
+    var timeId = "agTime" + index;
+    var timeLabel = el("label", "field__label", "Время");
+    timeLabel.setAttribute("for", timeId);
+    var timeInput = el("input", "input input--time");
+    timeInput.type = "time";
+    timeInput.step = "60";
+    timeInput.id = timeId;
+    timeInput.value = item.time || "";
+    timeInput.setAttribute("aria-label", "Время пункта " + (index + 1));
+    timeInput.addEventListener("input", function () {
+      state.draft.agenda[index].time = timeInput.value;
+      clearFieldError("agenda");
+      onDraftChanged();
+    });
+    timeField.appendChild(timeLabel);
+    timeField.appendChild(timeInput);
+
+    var del = el("button", "btn btn--mini btn--danger agenda__del");
+    del.type = "button";
+    del.setAttribute("aria-label", "Удалить пункт " + (index + 1));
+    var delIcon = svgEl("svg", { viewBox: "0 0 20 20", width: 18, height: 18, fill: "none", "aria-hidden": "true" });
+    delIcon.appendChild(svgEl("path", { d: "M5 6.4h10M8.2 6.4V4.6h3.6v1.8M6.6 6.4l.7 9h5.4l.7-9", stroke: "currentColor", "stroke-width": "1.7", "stroke-linecap": "round", "stroke-linejoin": "round" }));
+    del.appendChild(delIcon);
+    del.appendChild(el("span", null, "Удалить пункт"));
+    del.addEventListener("click", function () {
+      state.draft.agenda.splice(index, 1);
+      renderAgendaRows();
+      onDraftChanged();
+      /* Фокус переходит к следующей строке, а не в начало списка. */
+      var rows = refs.agendaList.querySelectorAll(".agenda__item");
+      var nextRow = rows[index] || rows[rows.length - 1];
+      if (nextRow) {
+        var nextInput = nextRow.querySelector("input");
+        if (nextInput) nextInput.focus();
+      } else if (refs.btnAddAgenda) {
+        refs.btnAddAgenda.focus();
+      }
+    });
+
+    row.appendChild(labelField);
+    row.appendChild(timeField);
+    row.appendChild(del);
+    return row;
+  }
+
+  function renderThemeCards() {
+    var list = refs.themeList;
+    clearNode(list);
+    THEME_INFO.forEach(function (theme) {
+      var card = el("button", "theme-card");
+      card.type = "button";
+      card.dataset.theme = theme.id;
+      card.setAttribute("aria-pressed", state.draft.theme === theme.id ? "true" : "false");
+      card.setAttribute("aria-label", "Оформление " + theme.name + ": " + theme.note);
+
+      var mini = el("span", "theme-card__mini theme-card__mini--" + theme.id);
+      mini.appendChild(el("i", "m-mini m-mini--title"));
+      mini.appendChild(el("i", "m-mini"));
+      mini.appendChild(el("i", "m-mini m-mini--short"));
+      var dots = el("span", "m-mini--dots");
+      dots.appendChild(el("i")); dots.appendChild(el("i")); dots.appendChild(el("i"));
+      mini.appendChild(dots);
+      card.appendChild(mini);
+
+      var name = el("span", "theme-card__name");
+      name.appendChild(el("span", null, theme.name));
+      var check = el("span", "theme-card__check");
+      check.appendChild(ICONS.check());
+      name.appendChild(check);
+      card.appendChild(name);
+
+      card.addEventListener("click", function () {
+        if (state.draft.theme === theme.id) return;
+        state.draft.theme = theme.id;
+        renderThemeCards();
+        onDraftChanged();
+      });
+      list.appendChild(card);
+    });
+  }
+
+  function clearFieldError(key) {
+    var refsMap = { title: "eTitle", date: "eDate", time: "eTime", venue: "eVenue", address: "eAddress", description: "eDescription" };
+    var node = refs[refsMap[key]];
+    if (node) { node.hidden = true; node.textContent = ""; }
+    var inputMap = { title: "fTitle", date: "fDate", time: "fTime", venue: "fVenue", address: "fAddress", description: "fDescription" };
+    var input = refs[inputMap[key]];
+    if (input) input.removeAttribute("aria-invalid");
+    if (key === "agenda") {
+      var box = refs.agendaList;
+      if (box) box.removeAttribute("aria-invalid");
+      if (refs.agendaMeta) refs.agendaMeta.classList.remove("is-over");
+    }
+  }
+
+  function renderErrors(errors) {
+    var map = {
+      title: ["eTitle", "fTitle"], date: ["eDate", "fDate"], time: ["eTime", "fTime"],
+      venue: ["eVenue", "fVenue"], address: ["eAddress", "fAddress"], description: ["eDescription", "fDescription"]
+    };
+    Object.keys(map).forEach(function (key) {
+      var pair = map[key];
+      var err = refs[pair[0]], input = refs[pair[1]];
+      if (!err || !input) return;
+      if (errors[key]) {
+        err.textContent = errors[key];
+        err.hidden = false;
+        input.setAttribute("aria-invalid", "true");
+      } else {
+        err.textContent = "";
+        err.hidden = true;
+        input.removeAttribute("aria-invalid");
+      }
+    });
+    if (errors.agenda) {
+      refs.agendaMeta.classList.add("is-over");
+      refs.agendaMeta.textContent = errors.agenda;
+    } else {
+      refs.agendaMeta.classList.remove("is-over");
+      refs.agendaMeta.textContent = state.draft.agenda.length + "/" + APP.agendaMax;
+    }
+  }
+
+  function showDemoNote(show) {
+    if (refs.demoNote) refs.demoNote.hidden = !show;
+  }
+
+  /* ============================================================
+     9. Обновление предпросмотра и режимы
+     ============================================================ */
+  function currentPreviewData() {
+    var data = aggregateFromDraft(state.draft);
+    if (!data.startsAt) data.startsAt = new Date().toISOString();
+    return data;
+  }
+
+  function renderPreview() {
+    var mount = refs.previewMount;
+    if (!mount) return;
+    var data = currentPreviewData();
+    renderInvite(mount, data, { guest: false });
+    if (refs.previewMeta) {
+      refs.previewMeta.textContent = "текущий черновик · тема " + data.theme;
+    }
+  }
+
+  function onDraftChanged() {
+    state.dirty = true;
+    updateCounters();
+    updateTimeHints();
+    clearEmptyOptional();
+    if (state.mode === "editor") {
+      renderPreview();
+      saveDraft();
+    }
+  }
+
+  function clearEmptyOptional() {
+    var check = validateDraft(state.draft, { timeZone: inviteTimeZone(state.draft) });
+    var partial = {};
+    ["title", "venue", "address"].forEach(function (key) {
+      if (check.errors[key]) partial[key] = check.errors[key];
+    });
+    if (state.draft.date && check.errors.date) partial.date = check.errors.date;
+    if (state.draft.time && check.errors.time) partial.time = check.errors.time;
+    renderErrors(partial);
+  }
+
+  function showEditorMode(opts) {
+    var options = opts || {};
+    state.mode = "editor";
+    stopTicker();
+    refs.guestRoot.hidden = true;
+    refs.guestRoot.style.display = "none";
+    clearNode(refs.guestRoot);
+    refs.layout.hidden = false;
+    refs.layout.style.display = "";
+    refs.editorPane.hidden = false;
+    refs.previewPane.hidden = false;
+    refs.btnGuestLabel.textContent = "Глазами гостя";
+    refs.btnCopyLabel.textContent = "Скопировать ссылку";
+    refs.previewLabel.textContent = "Предпросмотр";
+    if (refs.btnJump) refs.btnJump.hidden = false;
+    if (refs.brandTag) refs.brandTag.textContent = "конструктор приглашений";
+    if (options.draft) {
+      var incoming = options.draft;
+      incoming.timeZone = inviteTimeZone(incoming);
+      state.draft = incoming;
+      syncEditorFromDraft();
+    }
+    showDemoNote(!!options.demo);
+    updateShareHint();
+    if (options.focusField && refs[options.focusField]) refs[options.focusField].focus();
+    renderPreview();
+    if (options.scrollTop !== false) {
+      try { window.scrollTo({ top: 0, behavior: "auto" }); } catch (err) { window.scrollTo(0, 0); }
+    }
+  }
+
+  function showGuestMode(data, opts) {
+    var options = opts || {};
+    state.mode = "guest";
+    state.guest = data;
+    state.guestFromLink = !!options.fromLink;
+    state.guestFromEditor = !options.fromLink;
+    hideNotice();
+    refs.layout.hidden = true;
+    refs.layout.style.display = "none";
+    var root = refs.guestRoot;
+    clearNode(root);
+    root.hidden = false;
+    root.style.display = "flex";
+
+    var bar = el("div", "preview-bar");
+    bar.appendChild(el("span", "preview-bar__label", options.fromLink ? "Приглашение" : "Глазами гостя"));
+    var meta = el("span", "preview-bar__meta", "тема " + data.theme);
+    bar.appendChild(meta);
+    root.appendChild(bar);
+
+    var mount = el("div", "guest-mount");
+    root.appendChild(mount);
+    renderInvite(mount, data, { guest: true });
+
+    var foot = el("div", "guest-foot");
+    if (options.fromLink) {
+      var create = el("button", "btn btn--ghost");
+      create.type = "button";
+      create.appendChild(el("span", null, "Создать своё приглашение"));
+      create.addEventListener("click", function () {
+        var draft = loadDraft();
+        var demo = !draft;
+        showEditorMode({ draft: draft || demoDraft(), demo: demo });
+        showNotice({
+          kind: "ok",
+          title: "Открыт редактор. ",
+          text: draft ? "Ваш черновик восстановлен, данные из ссылки не изменены." : "Создан новый черновик. Данные из ссылки не изменены."
+        });
+      });
+      foot.appendChild(create);
+      foot.appendChild(el("span", "guest-foot__note", "Ссылка только для просмотра: редактор не изменяет это приглашение."));
+    } else {
+      var back = el("button", "btn btn--primary");
+      back.type = "button";
+      back.appendChild(el("span", null, "Вернуться к редактированию"));
+      back.addEventListener("click", function () { showEditorMode({ scrollTop: false }); });
+      foot.appendChild(back);
+      foot.appendChild(el("span", "guest-foot__note", "Так приглашение увидят гости."));
+    }
+    root.appendChild(foot);
+
+    if (refs.brandTag) refs.brandTag.textContent = options.fromLink ? "приглашение по ссылке" : "предпросмотр глазами гостя";
+    refs.btnGuestLabel.textContent = options.fromLink ? "Редактор" : "Вернуться к редактированию";
+    refs.btnCopyLabel.textContent = options.fromLink ? "Скопировать адрес" : "Скопировать ссылку";
+    refs.previewLabel.textContent = "";
+    if (refs.btnJump) refs.btnJump.hidden = true;
+    updateShareHint();
+    try { window.scrollTo({ top: 0, behavior: "auto" }); } catch (err) { window.scrollTo(0, 0); }
+  }
+
+  function updateShareHint() {
+    if (!refs.hintExtra) return;
+    refs.hintExtra.textContent = refs.btnCopyLabel && refs.btnCopyLabel.textContent === "Скопировать адрес"
+      ? "Это адрес текущей страницы: в режиме просмотра ссылка не создаётся."
+      : "";
+  }
+
+  function renderErrorScreen(kind, problems) {
+    state.mode = "error";
+    stopTicker();
+    refs.layout.hidden = true;
+    refs.layout.style.display = "none";
+    var root = refs.guestRoot;
+    clearNode(root);
+    root.hidden = false;
+    root.style.display = "flex";
+    showNotice({
+      kind: "error",
+      title: kind === "long" ? "Ссылка слишком длинная. " : "Не удалось открыть приглашение. ",
+      text: kind === "long"
+        ? "Ссылка длиннее " + APP.maxLinkLength + " символов. Попросите автора сократить описание или программу."
+        : "Ссылка повреждена или данные неполные. " + (problems && problems.length ? "Причина: " + problems.join(" ") : ""),
+      action: (function () {
+        var b = el("button", "btn btn--primary");
+        b.type = "button";
+        b.appendChild(el("span", null, "Перейти в редактор"));
+        b.addEventListener("click", function () {
+          var draft = loadDraft();
+          var demo = !draft;
+          clearHash();
+          showEditorMode({ draft: draft || demoDraft(), demo: demo });
+        });
+        return b;
+      })(),
+      sticky: true
+    });
+    if (refs.brandTag) refs.brandTag.textContent = "ссылка не открылась";
+    refs.btnGuestLabel.textContent = "Глазами гостя";
+    refs.btnCopyLabel.textContent = "Скопировать ссылку";
+  }
+
+  function clearHash() {
+    try {
+      if (window.history && window.history.replaceState) {
+        window.history.replaceState(null, "", location.pathname + location.search);
+      } else {
+        location.hash = "";
+      }
+    } catch (err) { }
+  }
+
+  /* ============================================================
+     10. Запуск и маршрутизация по ссылке
+     ============================================================ */
+  /* Разбор адреса страницы.
+     Данными приглашения считается только фрагмент, начинающийся с «invite=».
+     Любой другой якорь (#editorPane, #previewPane) — обычная навигация. */
+  function readFragment() {
+    var hash = "";
+    try { hash = String(location.hash || ""); } catch (err) { hash = ""; }
+    if (hash.charAt(0) === "#") hash = hash.slice(1);
+    if (!hash) return { kind: "none" };
+    var prefix = APP.fragmentKey + "=";
+    if (hash.slice(0, prefix.length) !== prefix) return { kind: "anchor" };
+    var token = hash.slice(prefix.length);
+    var amp = token.indexOf("&");
+    if (amp >= 0) token = token.slice(0, amp);
+    if (token === "") return { kind: "error", reason: "empty" };
+    if (token.length > APP.maxLinkLength) return { kind: "error", reason: "long", length: token.length };
+    return { kind: "data", token: token };
+  }
+
+  /* Полная проверка ссылки: сначала данные, потом показ.
+     Используется и при первой загрузке, и при смене адреса. */
+  function inviteFromFragment(fragment) {
+    var raw = null;
+    try {
+      raw = decodeInvite(fragment.token);
+    } catch (err) {
+      return { ok: false, reason: "decode", problems: ["Данные не удалось декодировать."] };
+    }
+    var res = normalizeInvite(raw);
+    if (!res.ok) return { ok: false, reason: "invalid", problems: res.problems };
+    return { ok: true, data: res.data };
+  }
+
+  /* Единая обработка адреса: возвращает true, если фрагмент был обработан
+     как приглашение (показано приглашение или экран ошибки). */
+  function handleFragment() {
+    var fragment = readFragment();
+    if (fragment.kind === "none" || fragment.kind === "anchor") return false;
+
+    if (fragment.kind === "error") {
+      if (fragment.reason === "long") {
+        renderErrorScreen("long", ["Ссылка длиннее " + APP.maxLinkLength + " символов."]);
+      } else {
+        renderErrorScreen("broken", ["Ссылка не содержит данных приглашения."]);
+      }
+      return true;
+    }
+
+    var result = inviteFromFragment(fragment);
+    if (!result.ok) {
+      renderErrorScreen("broken", result.problems);
+      return true;
+    }
+    showGuestMode(result.data, { fromLink: true });
+    return true;
+  }
+
+  function bootstrap() {
+    cacheRefs();
+    storageTest();
+
+    if (handleFragment()) return;
+
+    var draft = loadDraft();
+    var demo = !draft;
+    state.draft = draft || demoDraft();
+    syncEditorFromDraft();
+    showEditorMode({ draft: state.draft, demo: demo, scrollTop: false });
+    if (demo) saveDraft();
+    if (!storage.available) {
+      showNotice({
+        kind: "warn",
+        title: "Черновик не сохранится. ",
+        text: "Браузер не даёт доступ к локальному хранилищу (например, приватный режим). Редактор и предпросмотр работают, но после закрытия страницы данные пропадут.",
+        sticky: true
+      });
+    }
+  }
+
+  function bindEditor() {
+    var bindings = [
+      ["fTitle", "title"], ["fDate", "date"], ["fTime", "time"],
+      ["fVenue", "venue"], ["fAddress", "address"], ["fDescription", "description"]
+    ];
+    bindings.forEach(function (pair) {
+      var node = refs[pair[0]], key = pair[1];
+      if (!node) return;
+      node.addEventListener("input", function () {
+        state.draft[key] = node.value;
+        clearFieldError(key);
+        onDraftChanged();
+      });
+      node.addEventListener("blur", function () {
+        var check = validateDraft(state.draft, { timeZone: inviteTimeZone(state.draft) });
+        if (check.errors[key]) {
+          var map = { title: "eTitle", date: "eDate", time: "eTime", venue: "eVenue", address: "eAddress", description: "eDescription" };
+          var err = refs[map[key]];
+          if (err) { err.textContent = check.errors[key]; err.hidden = false; }
+          node.setAttribute("aria-invalid", "true");
+        }
+      });
+    });
+
+    refs.btnAddAgenda.addEventListener("click", function () {
+      if (state.draft.agenda.length >= APP.agendaMax) return;
+      state.draft.agenda.push({ time: "", label: "" });
+      renderAgendaRows();
+      onDraftChanged();
+      var rows = refs.agendaList.querySelectorAll(".agenda__item");
+      var last = rows[rows.length - 1];
+      if (last) {
+        var input = last.querySelector("input");
+        if (input) input.focus();
+      }
+    });
+
+    refs.btnGuest.addEventListener("click", function () {
+      if (state.mode === "guest") {
+        if (state.guestFromLink) {
+          var draft = loadDraft();
+          var demo = !draft;
+          clearHash();
+          showEditorMode({ draft: draft || demoDraft(), demo: demo });
+        } else {
+          showEditorMode({ scrollTop: false });
+        }
+        return;
+      }
+      var check = validateDraft(state.draft, { timeZone: inviteTimeZone(state.draft) });
+      if (!check.ok) {
+        renderErrors(check.errors);
+        showNotice({ kind: "error", title: "Проверьте поля. ", text: "Режим «Глазами гостя» показывает готовое приглашение — сначала заполните обязательные поля корректно." });
+        return;
+      }
+      showGuestMode(aggregateFromDraft(state.draft), { fromLink: false });
+    });
+
+    refs.btnCopy.addEventListener("click", function () {
+      if (refs.btnCopyLabel.textContent === "Скопировать адрес") {
+        copyText(location.href).then(function (ok) {
+          if (ok) showNotice({ kind: "ok", title: "Адрес скопирован. ", text: "Это адрес текущей страницы." });
+          else showNotice({ kind: "info", title: "Скопируйте адрес вручную. ", text: "", extra: selectableField(location.href), sticky: true });
+        });
+        return;
+      }
+      handleCopyLink();
+    });
+
+    window.addEventListener("hashchange", function () {
+      /* Та же проверка, что и при первой загрузке. */
+      if (handleFragment()) return;
+      /* Обычный якорь или пустой фрагмент: возвращаемся к редактору. */
+      if (state.mode !== "editor") {
+        var draft = loadDraft();
+        var demo = !draft;
+        showEditorMode({ draft: draft || demoDraft(), demo: demo, scrollTop: false });
+      }
+    });
+
+    document.addEventListener("visibilitychange", function () {
+      if (!document.hidden && state.mode === "guest") {
+        try { updateCountdown(refs.guestRoot, state.guest); } catch (err) { }
+      }
+    });
+  }
+
+  window.addEventListener("beforeunload", function () {
+    if (state.mode === "editor") saveDraft();
+  });
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", function () { bootstrap(); bindEditor(); });
+  } else {
+    bootstrap();
+    bindEditor();
+  }
+})();
+</script>
+</body>
+</html>
